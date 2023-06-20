@@ -12,7 +12,7 @@ SnapAlgo is an Algorand wallet built on metamask developmental snaps feature whi
 #### Simple Swap app
 [https://algoswap.netlify.app/](https://algoswap.netlify.app/)
 
-## Useage
+## Usage
 ### building
 > npx mm-snap build
 
