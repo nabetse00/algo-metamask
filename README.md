@@ -4,14 +4,6 @@
 SnapAlgo is an Algorand wallet built on metamask developmental snaps feature which allows code to be run in a secure execution enviroment inside the metamask extension itself. Because the feature is so new it is currently only available on Metamask Flask which can be found here
 [https://metamask.io/flask/](https://metamask.io/flask/)
 
-## Demo
-[snapalgo.io](https://snapalgo.io)
-## example apps
-#### simple wallet
-[https://snapalgowallet.netlify.app/](https://snapalgowallet.netlify.app/)
-#### Simple Swap app
-[https://algoswap.netlify.app/](https://algoswap.netlify.app/)
-
 ## Usage
 ### building
 > npx mm-snap build
