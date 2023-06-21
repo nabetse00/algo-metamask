@@ -14,7 +14,7 @@ export default class Utils {
         //metamask overrides Error codes
         //This function encodes an arc complient error code
         //into the error message, and is then seperated by the SDK
-        console.log(JSON.stringify(msg));
+        console.error(JSON.stringify(msg));
         throw new Error(`${code}\n${msg}`);
     }
 
@@ -38,8 +38,7 @@ export default class Utils {
             return true;
         }
         catch(e){
-            console.log("error - ")
-            console.log(e);
+            console.error(e);
             await Utils.sendConfirmation("alert", "notifcation", message);
             return false;
         }

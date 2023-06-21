@@ -14,10 +14,9 @@ export default async function Scan(version, url){
         actions = await msg.json()
     }
     catch(e){
-        console.log("no warning file for this version");
+        console.error("no warning file for this version");
         return true
     }
-    console.log(actions);
     if(!actions.action){
         return true
     }

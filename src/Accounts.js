@@ -203,12 +203,10 @@ export default class Accounts{
 
     //clears all account data
     async clearAccounts(){
-        
         await this.wallet.request({
             method: 'snap_manageState',
             params: {operation:'clear'},
           });  
-        
         return true
     }
 

@@ -72,18 +72,13 @@ export default class Swapper{
 
     static toSmallestUnit(amount, ticker){
       amount = new BigNumber(amount);
-      console.log("here");
       const output = amount.times(new BigNumber(10).exponentiatedBy(chains[ticker].data.nativeCurrency.decimals)).toFixed()
-      console.log(output);
       return output;
     }
 
     async sendEvm(to, wei, ticker){
-      console.log("sending evem");
-      console.log("ticker is ", ticker);
       await this.switchChain(ticker);
       const amount = '0x'+BigInt(wei).toString(16);
-      console.log("selectedAddress is");
       if(this.ethereum.selectedAddress === null){
         await this.ethereum.request({ method: 'eth_requestAccounts' });
       }
@@ -103,13 +98,7 @@ export default class Swapper{
     }
 
     async sendSnap(to, amount, ticker){
-      console.log("changenow address is ...");
-      console.log("ticker is ", ticker);
-
-      console.log(to);
       amount = BigInt(amount);
-      console.log("amount is");
-      console.log(amount)
       if(ticker === "algo"){
         await this.walletFuncs.transfer(to, amount);
       }
@@ -170,7 +159,6 @@ export default class Swapper{
         "action":"status",
         "id": transactionId
       })
-      console.log(data.body);
       return data.body;
     }
       
@@ -193,7 +181,6 @@ export default class Swapper{
             "to":chains[to].changeNowName,
             "amount":amount
         })
-        console.log(data);
         return data.body;
     }
 
@@ -212,12 +199,8 @@ export default class Swapper{
       let outputAddress =  null;
       if(chains[to].type === "snap"){
         outputAddress = this.algoWallet.getAddress()
-        console.log(outputAddress);
       }
       else if(chains[to].type === "imported" || chains[to].type === "native"){
-        console.log("to currency and type");
-        console.log(chains[to]);
-        console.log(chains[to].type);
         if(chains[to].type === "imported"){
           await this.switchChain(to);
         }
@@ -233,9 +216,7 @@ export default class Swapper{
         "addr": outputAddress,
         "email": email?email:""
       })
-      console.log(swapData);
       if(swapData.body.error === "true"){
-        console.log("here");
         Utils.throwError(500, JSON.stringify(swapData.body));
       }
         
@@ -250,22 +231,14 @@ export default class Swapper{
         return Utils.throwError(4300, "User Rejected Request");
       }
       if(swapData.body.error){
-        console.log("there is an error");
         return Utils.throwError(500, "Error in Swap")
       }
       const sendAmount = Swapper.toSmallestUnit(amount, from);
-      console.log('converted send amount is: ');
-      console.log(sendAmount);
-      console.log(swapData.body.payinAddress)
       if(chains[from].type === "imported" || chains[from].type === "native"){
-        console.log("chains[from] is ",chains[from]);
         await this.sendEvm(swapData.body.payinAddress, sendAmount, from, outputAddress);
       }
       if(chains[from].type === "snap"){
-        console.log("here");
-        console.log(sendAmount);
         await this.sendSnap(swapData.body.payinAddress, sendAmount, from);
-        console.log("send successful");
       }
       
 
@@ -273,11 +246,8 @@ export default class Swapper{
         method: 'snap_manageState',
         params: {operation: 'get'},
       });
-      console.log("state is")
-      console.log(state);
-      console.log(state[state.currentAccountId]);
       if(state.Accounts[state.currentAccountId].swaps == undefined){
-        console.log("swap history for this address is undefined");
+        console.error("swap history for this address is undefined");
         state.Accounts[state.currentAccountId].swaps = [swapData.body]
       }
       else{

@@ -59,9 +59,9 @@ export default class Arcs{
             }
             let txnBuffer = Buffer.from(txn.txn, 'base64');
             let decoded_txn = algosdk.decodeUnsignedTransaction(txnBuffer);
-            console.log(decoded_txn);
+
             let verifiedObj = Txn_Verifer.verifyTxn(decoded_txn, await this.walletFuncs.getSpendable());
-            console.log(verifiedObj);
+
             if(txn.message){
                 const msgConfirmation = await Utils.sendConfirmation("Untrusted Message", originString+" says:", txn.message)
                 if(!msgConfirmation){

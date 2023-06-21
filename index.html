@@ -1,6 +1,5 @@
 <!doctype html>
 <html>
-  <!--new computer-->
   </head>
     <title>Hello, Snaps!</title>
     <link rel="icon" type="image/svg" href="./images/icon.svg"/>
@@ -43,7 +42,7 @@
     <button class="transact">Transact</button>
     <button class="testAddress">Test Address</button>
     <br>
-    <button onClick="clearAccounts()">clear Accounts</button>
+    <button onClick="clearAccounts()">Clear Accounts</button>
     <br>
     <div id="transactionOutput" style="overflow-y: scroll;"></div>
     <p>Sign data</p>
@@ -62,7 +61,6 @@
     <button id="signAndPostTransactionButton">Sign and Post Transaction Test</button>
     <button id="deployButton">deploy</button>
     <button id="ezSignTransactionButton">ezSignAndPost</button>
-
 
     <button id="importButton">importAccount</button>
     <br/>
@@ -89,9 +87,6 @@
       <button id="getSwapHistory">swaphistory</button>
       <input id="transactionStatusInput" placeholder="changenow transaction id"/>
       <button id="getStatusButton">get Status</button>
-
-      
-      
     </div>
     <script src="sdk/index_bundle.js"></script>
   </body>
@@ -101,7 +96,7 @@
     //const snapId = `npm:algorand`;
     const snapId = `local:${window.location.href}`;
     let snapAlgo = new SnapAlgo.Wallet(snapId);
-    console.log(snapId)
+
     const connectButton = document.querySelector('button.connect')
     const sendButton = document.querySelector('button.showMnemonic')
     const balanceButton = document.querySelector('button.getBalance')
@@ -195,7 +190,6 @@
           }
         }  
       })
-      console.log(result)   
     }
     async function getSwapHistory(){
       const result = await ethereum.request({
@@ -207,7 +201,6 @@
           }
         }
       })
-      console.log(result);
     }
 
     async function getTransactionStatus(){
@@ -223,7 +216,6 @@
           }
         }
       })
-      console.log(result);
     }
 
     async function createNewAccount(){
@@ -259,7 +251,6 @@
           }
         }
       })
-      console.log(result);
     }
 
     async function preSwap(){
@@ -277,7 +268,6 @@
           }
         }
       })
-      console.log(result);
     }
 
     async function getMin(){
@@ -294,14 +284,11 @@
           }
         }
       })
-      console.log(result);
       return result;
     }
 
     async function signData(){
-      console.log("here2")
       let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
-      console.log(thing)
       let sig = await ethereum.request({
         method: 'wallet_invokeSnap',
         params: {
@@ -314,7 +301,6 @@
           }
         }        
       })
-      console.log(sig)
       document.getElementById('signature').innerText = JSON.stringify(sig);
     }
     
@@ -330,16 +316,13 @@
           }
         }}
       })
-      console.log(b64);
-      console.log(b64[0]);
-      console.log(b64[1]);
     }
 
     async function signTransaction(){
       let client = await algorand.getAlgorandV2Client();
       const algodClient = new algosdk.Algodv2(client);
       let params = await algodClient.getTransactionParams().do();
-      console.log(params);
+
       const receiver = "HZ57J3K46JIJXILONBBZOHX6BKPXEM2VVXNRFSUED6DKFD5ZD24PMJ3MVA";
       const sender = 'RQM3BAZ4WENFTGYW2MR5UR2BOGIR7KVM2HUYMPM47JCCL2W5XHN5LGW4EY';
       let txn = algosdk.makePaymentTxnWithSuggestedParamsFromObject({
@@ -364,7 +347,6 @@
             }
         }}
       })
-      console.log(signed);
     }
 
     async function signAndPostTransaction(){
@@ -396,8 +378,6 @@
           }
         }
       })
-      console.log(out);
-
     }
 
     async function optInTest(){
@@ -464,7 +444,6 @@
     }
 
     async function signTxns(){
-      console.log("here")
       let client = await algorand.getAlgorandV2Client();
       const algodClient = new algosdk.Algodv2(client);
       let params = await algodClient.getTransactionParams().do();
@@ -494,9 +473,6 @@
       const encodedTxn = await window.algorand.encodeTxn(txn);
       const encodedTxn2 = await window.algorand.encodeTxn(txn2);
       
-      
-      console.log(txn);
-      console.log("yo yo yo")
       let txns = [{txn: encodedTxn, message: "this transaction is a test"}]
       const out = await ethereum.request({
         method: 'wallet_invokeSnap',
@@ -517,7 +493,6 @@
         }]
       })
       */
-      console.log(out);
     }
 
 
@@ -534,7 +509,6 @@
 
         }
       })
-      console.log(server);
       return server;
     }
     async function clearAccounts(){
@@ -622,9 +596,7 @@
     });
     deployParams.suggestedParams = await algodClient.getTransactionParams().do();
     const signedTxn = await window.algorand.EZsign(txn);
-    console.log('signed\n\n\n\n\n');
     //const response = await window.algorand.postTxns(signedTxn);
-     //console.log('posted\n\n\n\n\n');
     
     //alert('Deploy successful\ntxId: '+response.txId);
   } catch(err) {alert(err)}
@@ -648,7 +620,6 @@
     }
 
     async function getAddress(){
-      console.log("here in get Address")
       let address = await ethereum.request({
           method: 'wallet_invokeSnap',
           params: {
@@ -728,19 +699,12 @@
         int 12345
         ==
         `
-      console.log(logic);
       let client = await algorand.getAlgorandV2Client();
       const algodClient = new algosdk.Algodv2(client);
       let data = (await algodClient.compile(logic).do()).result;
       
-      console.log("result is")
-      console.log(data);
       data = algorand.base64Decode(data);
       let logicSigAccount = new algosdk.LogicSigAccount(data);
-      console.log("to byte is");
-      console.log(logicSigAccount.toByte());
-      console.log(logicSigAccount);
-      console.log(algorand.base64Encode(logicSigAccount.toByte()));
       const response = await ethereum.request({
           method: 'wallet_invokeSnap',
           params: {snapId: snapId,
@@ -755,10 +719,6 @@
       })
       let msgpack = algorand.base64Decode(response);
       let signedLogicSigAccount = algosdk.LogicSigAccount.fromByte(msgpack);
-      console.log(signedLogicSigAccount);
-
-      
-      console.log(response);
     }
 
     async function getAccounts(){
@@ -770,14 +730,11 @@
             }
           }
         })
-      console.log(response);
-
     }
 
     async function transact(){
       try {
         let testnet = document.getElementById("testnet").checked
-        console.log(testnet);
         const response = await ethereum.request({
           method: 'wallet_invokeSnap',
           params: {snapId: snapId, 
@@ -792,8 +749,6 @@
               }
             }}
         })
-        console.log("transaction returned");
-        console.log(response);
       } catch (err) {
         console.trace(err)
         console.error(err)
