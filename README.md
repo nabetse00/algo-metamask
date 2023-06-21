@@ -25,7 +25,7 @@ Add and Call the below function to connect to the wallet.
 If the user does not have the snap installed, but has metamask flask installed this code will automaticly install it for them. **This code snippet can be added to any website with 0 depenancies otheer than metamask flask**
 
 ```javascript
-async  function  connect () {
+async function connect () {
   await window.ethereum.request({
     method: 'wallet_requestSnaps',
     params: {
