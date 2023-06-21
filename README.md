@@ -26,12 +26,12 @@ If the user does not have the snap installed, but has metamask flask installed t
 
 ```javascript
 async  function  connect () {
-	await window.ethereum.request({
-		method: 'wallet_requestSnaps',
-		params: {
-			'npm:algorand': {},
-		},
-	});
+  await window.ethereum.request({
+    method: 'wallet_requestSnaps',
+    params: {
+      'npm:algorand': {},
+    },
+  });
 }
 ```
 
@@ -46,18 +46,18 @@ if the method can be used with testnet, testnet is then used instead
 ```javascript
 const address = prompt("Please enter your recipient Address");
 const response = await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'transfer',
-				params: {
-					to: address,
-					amount: 1000,
-					testnet: false
-				}
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+        method: 'transfer',
+        params: {
+          to: address,
+          amount: 1000,
+          testnet: false
+        }
+    },
+  },
 });
 ```
 ### Available RPC Methods
@@ -72,39 +72,39 @@ Displays the users current balance in a metamask flask popup
 
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'displayBalance',
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'displayBalance',
+    },
+  },
 });
 ```
 ### getBalance
 returns the users current balance
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'getBalance',
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'getBalance',
+    },
+  },
 });
 ```
 ### getAddress
 returns the public address of the wallet
 ```javascript
 let address = await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'getAddress',
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'getAddress',
+    },
+  },
 });
 ```
 
@@ -113,82 +113,82 @@ transfers a number of algos to a specified address
 ```javascript
 const address = prompt("Please enter your address");
 const response = await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'transfer',
-				params: {
-					to: address,
-					amount: 1000
-				}
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'transfer',
+      params: {
+        to: address,
+        amount: 1000
+      }
+    },
+  },
 });
 ```
 ### displayMnemonic
 displays the wallets algorand mnemonic in a secure metamask window
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'displayMnemonic'
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'displayMnemonic'
+    },
+  },
 });
 ```
 ### getTransactions
 returns a list of javascript objects containing transaction data
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'getTransactions'
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'getTransactions'
+    },
+  },
 });
 ```
 ### getAssets
 returns a list of the current accounts assets
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'getAssets'
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'getAssets'
+    },
+  },
 });
 ```
 ### getAccounts
 returns an object containing all of the algorand accounts on a users metamask
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'getAccounts'
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'getAccounts'
+    },
+  },
 });
 ```
 ### getCurrentAccount
 returns the users current Account
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'getCurrentAccount'
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'getCurrentAccount'
+    },
+  },
 });
 ```
 ### setCurrentAccount
@@ -197,16 +197,16 @@ takes an algorand address as a parameter and throws an error if the address is n
 returns the users current Account
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'setAccount',
-				params: {
-					address: 'address'
-				}
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'setAccount',
+      params: {
+        address: 'address'
+      }
+    },
+  },
 });
 ```
 ***
@@ -219,16 +219,16 @@ sign an array of [WalletTransaction](https://arc.algorand.foundation/ARCs/arc-00
 returns an array of signed b64 algorand transactions
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'signTxns',
-				params: {
-			    txns:[WalletTransaction]
-		    }
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'signTxns',
+      params: {
+        txns:[WalletTransaction]
+      }
+    },
+  },
 });
 ```
 
@@ -236,16 +236,16 @@ await window.ethereum.request({
 takes an array of b64 signed algorand transactions. Like the output of signTxns and sends them to the algorand blockchain.
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'postTxns',
-				params: {
-			    stxns: ["b64SignedTxn"]
-		    }
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'postTxns',
+      params: {
+        stxns: ["b64SignedTxn"]
+      }
+    },
+  },
 });
 ```
 
@@ -253,16 +253,16 @@ await window.ethereum.request({
 takes an array of [WalletTransaction](https://arc.algorand.foundation/ARCs/arc-0001) objects and signs then posts them to the algorand blockchain
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'signAndPostTxns',
-				params: {
-			    txns: [WalletTransaction]
-		    }
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'signAndPostTxns',
+      params: {
+        txns: [WalletTransaction]
+      }
+    },
+  },
 });
 ```
 
@@ -275,16 +275,16 @@ the functions are used to interact with algorand assets
 opts into an algorand asset
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'assetOptIn',
-				params: {
-			    assetIndex: int
-		    }
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'assetOptIn',
+      params: {
+        assetIndex: int
+      }
+    },
+  },
 });
 ```
 
@@ -292,34 +292,34 @@ await window.ethereum.request({
 opts out of an algorand asset
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'assetOptOut',
-				params: {
-			    assetIndex: int
-		    }
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'assetOptOut',
+      params: {
+        assetIndex: int
+      }
+    },
+  },
 });
 ```
 ### transferAsset
 sends an algorand asset to another wallet that is opted into the given asset
 ```javascript
 await window.ethereum.request({
-	method: 'wallet_invokeSnap',
-	params: {
-		snapId: 'npm:algorand',
-		request: {
-				method: 'transferAsset',
-				params: {
-					assetIndex: int,
-					to: "algorandAddress",
-					amount: string
-				}
-		},
-	},
+  method: 'wallet_invokeSnap',
+  params: {
+    snapId: 'npm:algorand',
+    request: {
+      method: 'transferAsset',
+      params: {
+        assetIndex: int,
+        to: "algorandAddress",
+        amount: string
+      }
+    },
+  },
 });
 ```
 
@@ -337,43 +337,43 @@ algo | eth | bsc
 get minimum input amount for a specific swap
 ```javascript
 async function getMin(){
-	const result = await window.ethereum.request({
-		method: 'wallet_invokeSnap',
-		params: {
-			snapId: 'npm:algorand',
-			request: {
-					method: 'getMin',
-					params: {
-						from: 'eth' | 'bsc' | 'algo',
-						to: 'eth' | 'bsc' | 'algo',
-					}
-			},
-		},
-	});
+  const result = await window.ethereum.request({
+    method: 'wallet_invokeSnap',
+    params: {
+      snapId: 'npm:algorand',
+      request: {
+        method: 'getMin',
+        params: {
+          from: 'eth' | 'bsc' | 'algo',
+          to: 'eth' | 'bsc' | 'algo',
+        }
+      },
+    },
+  });
 
-	return result;
+  return result;
 }
 ```
 ### preSwap
 Get infomation about a swap without actually swapping
 ```javascript
 async function preSwap(){
-	const result = await window.ethereum.request({
-		method: 'wallet_invokeSnap',
-		params: {
-			snapId: 'npm:algorand',
-			request: {
-					method: 'preSwap',
-					params: {
-						from: 'eth' | 'bsc' | 'algo',
-						to: 'eth' | 'bsc' | 'algo',
-						amount: Number(amount) //done in base units i.e. eth not wei
-					}
-			},
-		},
-	});
+  const result = await window.ethereum.request({
+    method: 'wallet_invokeSnap',
+    params: {
+      snapId: 'npm:algorand',
+      request: {
+        method: 'preSwap',
+        params: {
+          from: 'eth' | 'bsc' | 'algo',
+          to: 'eth' | 'bsc' | 'algo',
+          amount: Number(amount) //done in base units i.e. eth not wei
+        }
+      },
+    },
+  });
 
-	return result;
+  return result;
 }
 ```
 
@@ -383,23 +383,23 @@ this will automatically send send the required currency to the exchange and use 
 uses changenow
 ```javascript
 async function swap(){
-	const result = await window.ethereum.request({
-		method: 'wallet_invokeSnap',
-		params: {
-			snapId: 'npm:algorand',
-			request: {
-					method: 'swap',
-					params: {
-						from: 'eth' | 'bsc' | 'algo',
-						to: 'eth' | 'bsc' | 'algo',
-						amount: Number(amount) //done in base units i.e. eth not wei
-						email: String("emailAddress@example.com") //completely optional
-					}
-			},
-		},
-	});
+  const result = await window.ethereum.request({
+    method: 'wallet_invokeSnap',
+    params: {
+      snapId: 'npm:algorand',
+      request: {
+        method: 'swap',
+        params: {
+          from: 'eth' | 'bsc' | 'algo',
+          to: 'eth' | 'bsc' | 'algo',
+          amount: Number(amount) //done in base units i.e. eth not wei
+          email: String("emailAddress@example.com") //completely optional
+        }
+      },
+    },
+  });
 
-	return result;
+  return result;
 }
 ```
 
@@ -407,17 +407,17 @@ async function swap(){
 the method returns an array of swap objects that give info about a swap performed by a given wallet.
 ```javascript
 async function swapHistory(){
-	const result = await window.ethereum.request({
-		method: 'wallet_invokeSnap',
-		params: {
-			snapId: 'npm:algorand',
-			request: {
-					method: 'swapHistory',
-			},
-		},
-	});
+  const result = await window.ethereum.request({
+    method: 'wallet_invokeSnap',
+    params: {
+      snapId: 'npm:algorand',
+      request: {
+        method: 'swapHistory',
+      },
+    },
+  });
 
-	return result;
+  return result;
 }
 ```
 
@@ -425,20 +425,20 @@ async function swapHistory(){
 this method returns a status object of swap given the swaps id that can be obtained from swap history
 ```javascript
 async function getSwapStatus(){
-	const result = await window.ethereum.request({
-		method: 'wallet_invokeSnap',
-		params: {
-			snapId: 'npm:algorand',
-			request: {
-					method: 'getSwapStatus',
-					params: {
-						id: 'changenowSwapID'
-					}
-			},
-		},
-	});
+  const result = await window.ethereum.request({
+    method: 'wallet_invokeSnap',
+    params: {
+      snapId: 'npm:algorand',
+      request: {
+        method: 'getSwapStatus',
+        params: {
+          id: 'changenowSwapID'
+        }
+      },
+    },
+  });
 
-	return result;
+  return result;
 }
 ```
 
