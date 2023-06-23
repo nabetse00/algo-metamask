@@ -184,7 +184,7 @@ module.exports.onRpcRequest = async ({origin, request}) => {
     
     //send an algorand asset
     case 'transferAsset':
-      return await walletFuncs.TransferAsset( params.assetIndex, params.to, params.amount);
+      return await walletFuncs.TransferAsset(params.assetIndex, params.to, params.amount);
 
     //get infomation about an asset by asset-ID
     case 'getAssetById':

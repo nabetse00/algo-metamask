@@ -239,7 +239,7 @@ export default class WalletFuncs{
             await algosdk.waitForConfirmation(algod, txId, 4)
         }
         catch(e){
-            console.log(e);
+            console.error(e);
             await Utils.notify("opt out Failed");
             return Utils.throwError(e);
         }
@@ -302,7 +302,7 @@ export default class WalletFuncs{
             await algosdk.waitForConfirmation(algod, txId, 4)
         }
         catch(e){
-            console.log("failed");
+            console.error(e);
             await Utils.notify("Opt In Failed");
             return Utils.throwError(e);
         }
