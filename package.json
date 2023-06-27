@@ -1,7 +1,7 @@
 {
-  "name": "algorand",
+  "name": "@algorandfoundation/algorand-metamask-snap",
   "version": "10.0.0",
-  "description": "algorand on metamask",
+  "description": "Metamask snap for Algorand",
   "main": "src/index.js",
   "scripts": {
     "test": "yarn build && yarn serve",
@@ -10,7 +10,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/paulfears/snapalgo.git"
+    "url": "https://github.com/algorandfoundation/algo-metamask"
   },
   "author": "",
   "license": "MIT",
