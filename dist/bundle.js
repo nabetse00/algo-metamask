@@ -16410,600 +16410,6 @@
       "buffer": 199
     }],
     169: [function (require, module, exports) {
-      (function () {
-        (function () {
-          const address = require('../encoding/address');
-          const encoding = require('../encoding/encoding');
-          const group = require('../group');
-          const logic = require('../logic/logic');
-          const logicSig = require('../logicsig');
-          const nacl = require('../nacl/naclWrappers');
-          const templates = require('./templates');
-          const transaction = require('../transaction');
-          class DynamicFee {
-            constructor(receiver, amount, firstValid, lastValid, closeRemainder, lease) {
-              if (!Number.isSafeInteger(amount) || amount < 0) throw Error('amount must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(firstValid) || firstValid < 0) throw Error('firstValid must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(lastValid) || lastValid < 0) throw Error('lastValid must be a positive number and smaller than 2^53-1');
-              if (typeof closeRemainder === 'undefined') {
-                closeRemainder = address.ALGORAND_ZERO_ADDRESS_STRING;
-              }
-              if (typeof lease === 'undefined') {
-                const leaseBytes = nacl.randomBytes(32);
-                lease = Buffer.from(leaseBytes).toString('base64');
-              }
-              const referenceProgramB64 = 'ASAFAgEHBgUmAyD+vKC7FEpaTqe0OKRoGsgObKEFvLYH/FZTJclWlfaiEyDmmpYeby1feshmB5JlUr6YI17TM2PKiJGLuck4qRW2+SB/g7Flf/H8U7ktwYFIodZd/C1LH6PWdyhK3dIAEm2QaTIEIhIzABAjEhAzAAcxABIQMwAIMQESEDEWIxIQMRAjEhAxBygSEDEJKRIQMQgkEhAxAiUSEDEEIQQSEDEGKhIQ';
-              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
-              const referenceOffsets = [5, 6, 7, 11, 44, 76];
-              const injectionVector = [amount, firstValid, lastValid, receiver, closeRemainder, lease];
-              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS, templates.valTypes.ADDRESS, templates.valTypes.BASE64];
-              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
-              this.programBytes = injectedBytes;
-              const lsig = new logicSig.LogicSig(injectedBytes, undefined);
-              this.address = lsig.address();
-            }
-            getProgram() {
-              return this.programBytes;
-            }
-            getAddress() {
-              return this.address;
-            }
-          }
-          function signDynamicFee(contract, secretKey, genesisHash) {
-            const programOutputs = logic.readProgram(contract, undefined);
-            const ints = programOutputs[0];
-            const byteArrays = programOutputs[1];
-            const keys = nacl.keyPairFromSecretKey(secretKey);
-            const from = address.encodeAddress(keys.publicKey);
-            const to = address.encodeAddress(byteArrays[0]);
-            const fee = 0;
-            const amount = ints[2];
-            const closeRemainderTo = address.encodeAddress(byteArrays[1]);
-            const firstRound = ints[3];
-            const lastRound = ints[4];
-            const lease = new Uint8Array(byteArrays[2]);
-            const txn = {
-              from,
-              to,
-              fee,
-              amount,
-              closeRemainderTo,
-              firstRound,
-              lastRound,
-              genesisHash,
-              type: 'pay',
-              lease
-            };
-            const lsig = new logicSig.LogicSig(contract, undefined);
-            lsig.sign(secretKey);
-            return {
-              txn,
-              lsig
-            };
-          }
-          function getDynamicFeeTransactions(txn, lsig, privateKey, fee) {
-            if (!lsig.verify(address.decodeAddress(txn.from).publicKey)) {
-              throw new Error('invalid signature');
-            }
-            txn.fee = fee;
-            if (txn.fee < transaction.ALGORAND_MIN_TX_FEE) {
-              txn.fee = transaction.ALGORAND_MIN_TX_FEE;
-            }
-            const keys = nacl.keyPairFromSecretKey(privateKey);
-            const from = address.encodeAddress(keys.publicKey);
-            const {
-              lease
-            } = txn;
-            delete txn.lease;
-            const txnObj = new transaction.Transaction(txn);
-            txnObj.addLease(lease, fee);
-            const feePayTxn = {
-              from,
-              to: txn.from,
-              fee,
-              amount: txnObj.fee,
-              firstRound: txn.firstRound,
-              lastRound: txn.lastRound,
-              genesisHash: txn.genesisHash,
-              type: 'pay'
-            };
-            const feePayTxnObj = new transaction.Transaction(feePayTxn);
-            feePayTxnObj.addLease(lease, fee);
-            const txnGroup = group.assignGroupID([feePayTxnObj, txnObj], undefined);
-            const feePayTxnWithGroup = txnGroup[0];
-            const txnObjWithGroup = txnGroup[1];
-            const lstx = {
-              lsig: lsig.get_obj_for_encoding(),
-              txn: txnObjWithGroup.get_obj_for_encoding()
-            };
-            const stx1 = feePayTxnWithGroup.signTxn(privateKey);
-            const stx2 = encoding.encode(lstx);
-            const concatStx = new Uint8Array(stx1.length + stx2.length);
-            concatStx.set(stx1);
-            concatStx.set(stx2, stx1.length);
-            return concatStx;
-          }
-          module.exports = {
-            DynamicFee,
-            getDynamicFeeTransactions,
-            signDynamicFee
-          };
-        }).call(this);
-      }).call(this, require("buffer").Buffer);
-    }, {
-      "../encoding/address": 164,
-      "../encoding/encoding": 166,
-      "../group": 168,
-      "../logic/logic": 177,
-      "../logicsig": 178,
-      "../nacl/naclWrappers": 184,
-      "../transaction": 186,
-      "./templates": 175,
-      "buffer": 199
-    }],
-    170: [function (require, module, exports) {
-      (function () {
-        (function () {
-          const sha256 = require('js-sha256');
-          const {
-            keccak256
-          } = require('js-sha3');
-          const logic = require('../logic/logic');
-          const logicSig = require('../logicsig');
-          const templates = require('./templates');
-          const transaction = require('../transaction');
-          class HTLC {
-            constructor(owner, receiver, hashFunction, hashImage, expiryRound, maxFee) {
-              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
-              let referenceProgramB64 = '';
-              if (hashFunction === 'sha256') {
-                referenceProgramB64 = 'ASAECAEACSYDIOaalh5vLV96yGYHkmVSvpgjXtMzY8qIkYu5yTipFbb5IH+DsWV/8fxTuS3BgUih1l38LUsfo9Z3KErd0gASbZBpIP68oLsUSlpOp7Q4pGgayA5soQW8tgf8VlMlyVaV9qITMQEiDjEQIxIQMQcyAxIQMQgkEhAxCSgSLQEpEhAxCSoSMQIlDRAREA==';
-              } else if (hashFunction === 'keccak256') {
-                referenceProgramB64 = 'ASAECAEACSYDIOaalh5vLV96yGYHkmVSvpgjXtMzY8qIkYu5yTipFbb5IH+DsWV/8fxTuS3BgUih1l38LUsfo9Z3KErd0gASbZBpIP68oLsUSlpOp7Q4pGgayA5soQW8tgf8VlMlyVaV9qITMQEiDjEQIxIQMQcyAxIQMQgkEhAxCSgSLQIpEhAxCSoSMQIlDRAREA==';
-              } else {
-                throw Error('hash function unrecognized');
-              }
-              const hashImageBytes = Buffer.from(hashImage, 'base64');
-              if (hashImageBytes.length !== 32) throw Error('hash image must be 32 bytes');
-              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
-              const referenceOffsets = [3, 6, 10, 42, 76];
-              const injectionVector = [maxFee, expiryRound, receiver, hashImage, owner];
-              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS, templates.valTypes.BASE64, templates.valTypes.ADDRESS];
-              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
-              this.programBytes = injectedBytes;
-              const lsig = new logicSig.LogicSig(injectedBytes, undefined);
-              this.address = lsig.address();
-            }
-            getProgram() {
-              return this.programBytes;
-            }
-            getAddress() {
-              return this.address;
-            }
-          }
-          function signTransactionWithHTLCUnlock(contract, txn, preImageAsBase64) {
-            const preImageBytes = Buffer.from(preImageAsBase64, 'base64');
-            const readResult = logic.readProgram(contract, undefined);
-            const ints = readResult[0];
-            const byteArrays = readResult[1];
-            const expectedHashedOutput = byteArrays[1];
-            const hashFunction = contract[contract.length - 15];
-            if (hashFunction === 1) {
-              const hash = sha256.create();
-              hash.update(preImageBytes);
-              const actualHashedOutput = Buffer.from(hash.hex(), 'hex');
-              if (!actualHashedOutput.equals(expectedHashedOutput)) {
-                throw new Error('sha256 hash of preimage did not match stored contract hash');
-              }
-            } else if (hashFunction === 2) {
-              const hash = keccak256.create();
-              hash.update(preImageBytes);
-              const actualHashedOutput = Buffer.from(hash.hex(), 'hex');
-              if (!actualHashedOutput.equals(expectedHashedOutput)) {
-                throw new Error('keccak256 hash of preimage did not match stored contract hash');
-              }
-            } else {
-              throw new Error('hash function in contract unrecognized');
-            }
-            const args = [preImageBytes];
-            const lsig = new logicSig.LogicSig(contract, args);
-            delete txn.to;
-            const maxFee = ints[0];
-            const tempTxn = new transaction.Transaction(txn);
-            if (tempTxn.fee > maxFee) {
-              throw new Error(`final fee of payment transaction${tempTxn.fee.toString()}greater than transaction max fee${maxFee.toString()}`);
-            }
-            return logicSig.signLogicSigTransaction(txn, lsig);
-          }
-          module.exports = {
-            HTLC,
-            signTransactionWithHTLCUnlock
-          };
-        }).call(this);
-      }).call(this, require("buffer").Buffer);
-    }, {
-      "../logic/logic": 177,
-      "../logicsig": 178,
-      "../transaction": 186,
-      "./templates": 175,
-      "buffer": 199,
-      "js-sha256": 250,
-      "js-sha3": 251
-    }],
-    171: [function (require, module, exports) {
-      const dynamicFeeTemplate = require('./dynamicfee');
-      const htlcTemplate = require('./htlc');
-      const limitOrderTemplate = require('./limitorder');
-      const splitTemplate = require('./split');
-      const periodicPayTemplate = require('./periodicpayment');
-      module.exports = {
-        DynamicFee: dynamicFeeTemplate.DynamicFee,
-        getDynamicFeeTransactions: dynamicFeeTemplate.getDynamicFeeTransactions,
-        signDynamicFee: dynamicFeeTemplate.signDynamicFee,
-        HTLC: htlcTemplate.HTLC,
-        signTransactionWithHTLCUnlock: htlcTemplate.signTransactionWithHTLCUnlock,
-        LimitOrder: limitOrderTemplate.LimitOrder,
-        getSwapAssetsTransaction: limitOrderTemplate.getSwapAssetsTransaction,
-        Split: splitTemplate.Split,
-        getSplitFundsTransaction: splitTemplate.getSplitFundsTransaction,
-        PeriodicPayment: periodicPayTemplate.PeriodicPayment,
-        getPeriodicPaymentWithdrawalTransaction: periodicPayTemplate.getPeriodicPaymentWithdrawalTransaction
-      };
-    }, {
-      "./dynamicfee": 169,
-      "./htlc": 170,
-      "./limitorder": 172,
-      "./periodicpayment": 173,
-      "./split": 174
-    }],
-    172: [function (require, module, exports) {
-      (function () {
-        (function () {
-          const address = require('../encoding/address');
-          const makeTxn = require('../makeTxn');
-          const group = require('../group');
-          const logic = require('../logic/logic');
-          const logicSig = require('../logicsig');
-          const nacl = require('../nacl/naclWrappers');
-          const templates = require('./templates');
-          const utils = require('../utils/utils');
-          class LimitOrder {
-            constructor(owner, assetid, ratn, ratd, expiryRound, minTrade, maxFee) {
-              if (!Number.isSafeInteger(assetid) || assetid < 0) throw Error('assetid must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(ratn) || ratn < 0) throw Error('ratn must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(ratd) || ratd < 0) throw Error('ratd must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(minTrade) || minTrade < 0) throw Error('minTrade must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
-              const referenceProgramB64 = 'ASAKAAEFAgYEBwgJCiYBIP68oLsUSlpOp7Q4pGgayA5soQW8tgf8VlMlyVaV9qITMRYiEjEQIxIQMQEkDhAyBCMSQABVMgQlEjEIIQQNEDEJMgMSEDMBECEFEhAzAREhBhIQMwEUKBIQMwETMgMSEDMBEiEHHTUCNQExCCEIHTUENQM0ATQDDUAAJDQBNAMSNAI0BA8QQAAWADEJKBIxAiEJDRAxBzIDEhAxCCISEBA=';
-              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
-              const referenceOffsets = [5, 7, 9, 10, 11, 12, 16];
-              const injectionVector = [maxFee, minTrade, assetid, ratd, ratn, expiryRound, owner];
-              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS];
-              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
-              this.programBytes = injectedBytes;
-              const lsig = new logicSig.LogicSig(injectedBytes, undefined);
-              this.address = lsig.address();
-              this.owner = owner;
-              this.assetid = assetid;
-            }
-            getProgram() {
-              return this.programBytes;
-            }
-            getAddress() {
-              return this.address;
-            }
-          }
-          function getSwapAssetsTransaction(contract, assetAmount, microAlgoAmount, secretKey, fee, firstRound, lastRound, genesisHash) {
-            const buyerKeyPair = nacl.keyPairFromSecretKey(secretKey);
-            const buyerAddr = address.encodeAddress(buyerKeyPair.publicKey);
-            const programOutputs = logic.readProgram(contract, undefined);
-            const ints = programOutputs[0];
-            const byteArrays = programOutputs[1];
-            let noCloseRemainder;
-            let noAssetRevocationTarget;
-            const contractAssetID = ints[6];
-            const contractOwner = address.encodeAddress(byteArrays[0]);
-            const lsig = logicSig.makeLogicSig(contract, undefined);
-            const contractAddress = lsig.address();
-            const algosForAssets = makeTxn.makePaymentTxn(contractAddress, buyerAddr, fee, microAlgoAmount, noCloseRemainder, firstRound, lastRound, undefined, genesisHash, undefined);
-            const assetsForAlgos = makeTxn.makeAssetTransferTxn(buyerAddr, contractOwner, noCloseRemainder, noAssetRevocationTarget, fee, assetAmount, firstRound, lastRound, undefined, genesisHash, undefined, contractAssetID);
-            const txns = [algosForAssets, assetsForAlgos];
-            const txGroup = group.assignGroupID(txns);
-            const ratd = ints[7];
-            const ratn = ints[8];
-            if (assetAmount * ratd < microAlgoAmount * ratn) {
-              throw new Error(`bad payment ratio, ${assetAmount.toString()}*${ratd.toString()} !>= ${microAlgoAmount.toString()}*${ratn.toString()}`);
-            }
-            const minTrade = ints[4];
-            if (microAlgoAmount < minTrade) {
-              throw new Error(`payment amount ${microAlgoAmount.toString()} less than minimum trade ${minTrade.toString()}`);
-            }
-            const maxFee = ints[2];
-            if (txGroup[0].fee > maxFee) {
-              throw new Error(`final fee of payment transaction ${txGroup[0].fee.toString()} greater than transaction max fee ${maxFee.toString()}`);
-            }
-            if (txGroup[1].fee > maxFee) {
-              throw new Error(`final fee of asset transaction ${txGroup[1].fee.toString()} greater than transaction max fee ${maxFee.toString()}`);
-            }
-            const algosForAssetsSigned = logicSig.signLogicSigTransactionObject(txGroup[0], lsig);
-            const assetsForAlgosSigned = txGroup[1].signTxn(secretKey);
-            return utils.concatArrays(algosForAssetsSigned.blob, assetsForAlgosSigned);
-          }
-          module.exports = {
-            LimitOrder,
-            getSwapAssetsTransaction
-          };
-        }).call(this);
-      }).call(this, require("buffer").Buffer);
-    }, {
-      "../encoding/address": 164,
-      "../group": 168,
-      "../logic/logic": 177,
-      "../logicsig": 178,
-      "../makeTxn": 180,
-      "../nacl/naclWrappers": 184,
-      "../utils/utils": 194,
-      "./templates": 175,
-      "buffer": 199
-    }],
-    173: [function (require, module, exports) {
-      (function () {
-        (function () {
-          const address = require('../encoding/address');
-          const makeTxn = require('../makeTxn');
-          const logic = require('../logic/logic');
-          const logicSig = require('../logicsig');
-          const nacl = require('../nacl/naclWrappers');
-          const templates = require('./templates');
-          class PeriodicPayment {
-            constructor(receiver, amount, withdrawalWindow, period, expiryRound, maxFee, lease) {
-              this.receiver = receiver;
-              if (!Number.isSafeInteger(amount) || amount < 0) throw Error('amount must be a positive number and smaller than 2^53-1');
-              this.amount = amount;
-              if (!Number.isSafeInteger(withdrawalWindow) || withdrawalWindow < 0) throw Error('withdrawalWindow must be a positive number and smaller than 2^53-1');
-              this.withdrawalWindow = withdrawalWindow;
-              if (!Number.isSafeInteger(period) || period < 0) throw Error('period must be a positive number and smaller than 2^53-1');
-              this.period = period;
-              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
-              this.expiryRound = expiryRound;
-              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
-              this.maxFee = maxFee;
-              if (lease === undefined) {
-                const leaseBytes = nacl.randomBytes(32);
-                this.lease = Buffer.from(leaseBytes).toString('base64');
-              } else {
-                this.lease = lease;
-              }
-              this.programBytes = this.getProgram();
-              const lsig = new logicSig.LogicSig(this.programBytes, undefined);
-              this.address = lsig.address();
-            }
-            getProgram() {
-              const referenceProgramB64 = 'ASAHAQYFAAQDByYCIAECAwQFBgcIAQIDBAUGBwgBAgMEBQYHCAECAwQFBgcIIJKvkYTkEzwJf2arzJOxERsSogG9nQzKPkpIoc4TzPTFMRAiEjEBIw4QMQIkGCUSEDEEIQQxAggSEDEGKBIQMQkyAxIxBykSEDEIIQUSEDEJKRIxBzIDEhAxAiEGDRAxCCUSEBEQ';
-              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
-              const referenceOffsets = [4, 5, 7, 8, 9, 12, 46];
-              const injectionVector = [this.maxFee, this.period, this.withdrawalWindow, this.amount, this.expiryRound, this.lease, this.receiver];
-              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.BASE64, templates.valTypes.ADDRESS];
-              return templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
-            }
-            getAddress() {
-              return this.address;
-            }
-          }
-          function getPeriodicPaymentWithdrawalTransaction(contract, fee, firstValid, genesisHash) {
-            const readResult = logic.readProgram(contract, undefined);
-            const ints = readResult[0];
-            const byteArrays = readResult[1];
-            const period = ints[2];
-            const duration = ints[4];
-            const amount = ints[5];
-            if (firstValid % period !== 0) {
-              throw new Error(`firstValid round ${firstValid.toString()} was not a multiple of contract period ${period.toString()}`);
-            }
-            const receiverBytes = byteArrays[1];
-            const receiver = address.encodeAddress(receiverBytes);
-            const leaseBuffer = byteArrays[0];
-            const lease = new Uint8Array(leaseBuffer);
-            const lastValid = firstValid + duration;
-            const to = receiver;
-            let noCloseRemainder;
-            let noNote;
-            const lsig = logicSig.makeLogicSig(contract, undefined);
-            const from = lsig.address();
-            const txn = {
-              from,
-              to,
-              fee,
-              amount,
-              closeRemainderTo: noCloseRemainder,
-              firstRound: firstValid,
-              lastRound: lastValid,
-              note: noNote,
-              genesisHash,
-              genesisID: '',
-              type: 'pay',
-              lease
-            };
-            const tempTxn = makeTxn.makePaymentTxn(from, to, fee, amount, noCloseRemainder, firstValid, lastValid, noNote, genesisHash, '');
-            if (tempTxn.fee > ints[1]) {
-              throw new Error(`final fee of payment transaction${tempTxn.fee.toString()}greater than transaction max fee${ints[1].toString()}`);
-            }
-            return logicSig.signLogicSigTransaction(txn, lsig);
-          }
-          module.exports = {
-            PeriodicPayment,
-            getPeriodicPaymentWithdrawalTransaction
-          };
-        }).call(this);
-      }).call(this, require("buffer").Buffer);
-    }, {
-      "../encoding/address": 164,
-      "../logic/logic": 177,
-      "../logicsig": 178,
-      "../makeTxn": 180,
-      "../nacl/naclWrappers": 184,
-      "./templates": 175,
-      "buffer": 199
-    }],
-    174: [function (require, module, exports) {
-      (function () {
-        (function () {
-          const address = require('../encoding/address');
-          const makeTxn = require('../makeTxn');
-          const group = require('../group');
-          const logicsig = require('../logicsig');
-          const logic = require('../logic/logic');
-          const templates = require('./templates');
-          const utils = require('../utils/utils');
-          class Split {
-            constructor(owner, receiverOne, receiverTwo, rat1, rat2, expiryRound, minPay, maxFee) {
-              if (!Number.isSafeInteger(rat2) || rat2 < 0) throw Error('rat2 must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(rat1) || rat1 < 0) throw Error('rat1 must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(minPay) || minPay < 0) throw Error('minPay must be a positive number and smaller than 2^53-1');
-              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
-              const referenceProgramB64 = 'ASAIAQUCAAYHCAkmAyCztwQn0+DycN+vsk+vJWcsoz/b7NDS6i33HOkvTpf+YiC3qUpIgHGWE8/1LPh9SGCalSN7IaITeeWSXbfsS5wsXyC4kBQ38Z8zcwWVAym4S8vpFB/c0XC6R4mnPi9EBADsPDEQIhIxASMMEDIEJBJAABkxCSgSMQcyAxIQMQglEhAxAiEEDRAiQAAuMwAAMwEAEjEJMgMSEDMABykSEDMBByoSEDMACCEFCzMBCCEGCxIQMwAIIQcPEBA=';
-              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
-              const referenceOffsets = [4, 7, 8, 9, 10, 14, 47, 80];
-              const injectionVector = [maxFee, expiryRound, rat2, rat1, minPay, owner, receiverOne, receiverTwo];
-              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS, templates.valTypes.ADDRESS, templates.valTypes.ADDRESS];
-              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
-              this.programBytes = injectedBytes;
-              const lsig = logicsig.makeLogicSig(injectedBytes, undefined);
-              this.address = lsig.address();
-            }
-            getProgram() {
-              return this.programBytes;
-            }
-            getAddress() {
-              return this.address;
-            }
-          }
-          function getSplitFundsTransaction(contract, amount, firstRound, lastRound, fee, genesisHash) {
-            const programOutputs = logic.readProgram(contract, undefined);
-            const ints = programOutputs[0];
-            const byteArrays = programOutputs[1];
-            let rat2 = ints[6];
-            let rat1 = ints[5];
-            let amountForReceiverOne = 0;
-            const gcdFn = (a, b) => {
-              if (typeof a !== 'number' || typeof b !== 'number') throw new Error('gcd operates only on positive integers');
-              if (!b) {
-                return a;
-              }
-              return gcdFn(b, a % b);
-            };
-            const gcd = gcdFn(rat2, rat1);
-            rat2 = Math.floor(rat2 / gcd);
-            rat1 = Math.floor(rat1 / gcd);
-            const ratio = rat1 / rat2;
-            amountForReceiverOne = Math.round(amount / (1 + ratio));
-            const amountForReceiverTwo = amount - amountForReceiverOne;
-            if (rat1 * amountForReceiverOne !== rat2 * amountForReceiverTwo) {
-              throw Error('could not split funds in a way that satisfied the contract ratio');
-            }
-            const logicSig = logicsig.makeLogicSig(contract, undefined);
-            const from = logicSig.address();
-            const receiverOne = address.encodeAddress(byteArrays[1]);
-            const receiverTwo = address.encodeAddress(byteArrays[2]);
-            const tx1 = makeTxn.makePaymentTxn(from, receiverOne, fee, amountForReceiverOne, undefined, firstRound, lastRound, undefined, genesisHash);
-            const tx2 = makeTxn.makePaymentTxn(from, receiverTwo, fee, amountForReceiverTwo, undefined, firstRound, lastRound, undefined, genesisHash);
-            const txns = [tx1, tx2];
-            const txGroup = group.assignGroupID(txns);
-            const signedTxns = txGroup.map(txn => logicsig.signLogicSigTransactionObject(txn, logicsig).blob);
-            return utils.concatArrays(signedTxns[0], signedTxns[1]);
-          }
-          module.exports = {
-            Split,
-            getSplitFundsTransaction
-          };
-        }).call(this);
-      }).call(this, require("buffer").Buffer);
-    }, {
-      "../encoding/address": 164,
-      "../group": 168,
-      "../logic/logic": 177,
-      "../logicsig": 178,
-      "../makeTxn": 180,
-      "../utils/utils": 194,
-      "./templates": 175,
-      "buffer": 199
-    }],
-    175: [function (require, module, exports) {
-      (function () {
-        (function () {
-          const address = require('../encoding/address');
-          function putUvarint(buf, x) {
-            let i = 0;
-            while (x > 0x80) {
-              buf.push(x & 0xff | 0x80);
-              x >>= 7;
-              i += 1;
-            }
-            buf.push(x & 0xff);
-            return i + 1;
-          }
-          const valTypes = {
-            INT: 1,
-            ADDRESS: 2,
-            BASE64: 3
-          };
-          function inject(orig, offsets, values, valueTypes) {
-            if (offsets.length !== values.length || offsets.length !== valueTypes.length) {
-              throw new Error('Lengths do not match');
-            }
-            let res = orig;
-            function replace(arr, newVal, offset, placeholderLength) {
-              const beforeReplacement = arr.slice(0, offset);
-              const afterReplacement = arr.slice(offset + placeholderLength, arr.length);
-              const chunks = [beforeReplacement, Buffer.from(newVal), afterReplacement];
-              return Buffer.concat(chunks);
-            }
-            for (let i = 0; i < offsets.length; i++) {
-              let decodedLength = 0;
-              let val = values[i];
-              const valType = valueTypes[i];
-              switch (valType) {
-                case valTypes.INT:
-                  const intBuf = [];
-                  decodedLength = putUvarint(intBuf, val);
-                  res = replace(res, intBuf, offsets[i], 1);
-                  break;
-                case valTypes.ADDRESS:
-                  val = address.decodeAddress(val);
-                  res = replace(res, val.publicKey, offsets[i], 32);
-                  break;
-                case valTypes.BASE64:
-                  const lenBuf = [];
-                  val = Buffer.from(val, 'base64');
-                  putUvarint(lenBuf, val.length);
-                  val = Buffer.concat([Buffer.from(lenBuf), val]);
-                  res = replace(res, val, offsets[i], 33);
-                  break;
-                default:
-                  throw new Error('unrecognized value type');
-              }
-              if (decodedLength !== 0) {
-                for (let o = 0; o < offsets.length; o++) {
-                  offsets[o] += decodedLength - 1;
-                }
-              }
-            }
-            return res;
-          }
-          module.exports = {
-            inject,
-            valTypes
-          };
-        }).call(this);
-      }).call(this, require("buffer").Buffer);
-    }, {
-      "../encoding/address": 164,
-      "buffer": 199
-    }],
-    176: [function (require, module, exports) {
       module.exports = {
         "EvalMaxVersion": 6,
         "LogicSigVersion": 5,
@@ -18409,7 +17815,7 @@
         }]
       };
     }, {}],
-    177: [function (require, module, exports) {
+    170: [function (require, module, exports) {
       "use strict";
 
       var __importDefault = this && this.__importDefault || function (mod) {
@@ -18637,7 +18043,601 @@
       exports.langspecEvalMaxVersion = langspec_json_1.default.EvalMaxVersion;
       exports.langspecLogicSigVersion = langspec_json_1.default.LogicSigVersion;
     }, {
-      "./langspec.json": 176
+      "./langspec.json": 169
+    }],
+    171: [function (require, module, exports) {
+      (function () {
+        (function () {
+          const address = require('../encoding/address');
+          const encoding = require('../encoding/encoding');
+          const group = require('../group');
+          const logic = require('../logic/logic');
+          const logicSig = require('../logicsig');
+          const nacl = require('../nacl/naclWrappers');
+          const templates = require('./templates');
+          const transaction = require('../transaction');
+          class DynamicFee {
+            constructor(receiver, amount, firstValid, lastValid, closeRemainder, lease) {
+              if (!Number.isSafeInteger(amount) || amount < 0) throw Error('amount must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(firstValid) || firstValid < 0) throw Error('firstValid must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(lastValid) || lastValid < 0) throw Error('lastValid must be a positive number and smaller than 2^53-1');
+              if (typeof closeRemainder === 'undefined') {
+                closeRemainder = address.ALGORAND_ZERO_ADDRESS_STRING;
+              }
+              if (typeof lease === 'undefined') {
+                const leaseBytes = nacl.randomBytes(32);
+                lease = Buffer.from(leaseBytes).toString('base64');
+              }
+              const referenceProgramB64 = 'ASAFAgEHBgUmAyD+vKC7FEpaTqe0OKRoGsgObKEFvLYH/FZTJclWlfaiEyDmmpYeby1feshmB5JlUr6YI17TM2PKiJGLuck4qRW2+SB/g7Flf/H8U7ktwYFIodZd/C1LH6PWdyhK3dIAEm2QaTIEIhIzABAjEhAzAAcxABIQMwAIMQESEDEWIxIQMRAjEhAxBygSEDEJKRIQMQgkEhAxAiUSEDEEIQQSEDEGKhIQ';
+              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
+              const referenceOffsets = [5, 6, 7, 11, 44, 76];
+              const injectionVector = [amount, firstValid, lastValid, receiver, closeRemainder, lease];
+              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS, templates.valTypes.ADDRESS, templates.valTypes.BASE64];
+              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
+              this.programBytes = injectedBytes;
+              const lsig = new logicSig.LogicSig(injectedBytes, undefined);
+              this.address = lsig.address();
+            }
+            getProgram() {
+              return this.programBytes;
+            }
+            getAddress() {
+              return this.address;
+            }
+          }
+          function signDynamicFee(contract, secretKey, genesisHash) {
+            const programOutputs = logic.readProgram(contract, undefined);
+            const ints = programOutputs[0];
+            const byteArrays = programOutputs[1];
+            const keys = nacl.keyPairFromSecretKey(secretKey);
+            const from = address.encodeAddress(keys.publicKey);
+            const to = address.encodeAddress(byteArrays[0]);
+            const fee = 0;
+            const amount = ints[2];
+            const closeRemainderTo = address.encodeAddress(byteArrays[1]);
+            const firstRound = ints[3];
+            const lastRound = ints[4];
+            const lease = new Uint8Array(byteArrays[2]);
+            const txn = {
+              from,
+              to,
+              fee,
+              amount,
+              closeRemainderTo,
+              firstRound,
+              lastRound,
+              genesisHash,
+              type: 'pay',
+              lease
+            };
+            const lsig = new logicSig.LogicSig(contract, undefined);
+            lsig.sign(secretKey);
+            return {
+              txn,
+              lsig
+            };
+          }
+          function getDynamicFeeTransactions(txn, lsig, privateKey, fee) {
+            if (!lsig.verify(address.decodeAddress(txn.from).publicKey)) {
+              throw new Error('invalid signature');
+            }
+            txn.fee = fee;
+            if (txn.fee < transaction.ALGORAND_MIN_TX_FEE) {
+              txn.fee = transaction.ALGORAND_MIN_TX_FEE;
+            }
+            const keys = nacl.keyPairFromSecretKey(privateKey);
+            const from = address.encodeAddress(keys.publicKey);
+            const {
+              lease
+            } = txn;
+            delete txn.lease;
+            const txnObj = new transaction.Transaction(txn);
+            txnObj.addLease(lease, fee);
+            const feePayTxn = {
+              from,
+              to: txn.from,
+              fee,
+              amount: txnObj.fee,
+              firstRound: txn.firstRound,
+              lastRound: txn.lastRound,
+              genesisHash: txn.genesisHash,
+              type: 'pay'
+            };
+            const feePayTxnObj = new transaction.Transaction(feePayTxn);
+            feePayTxnObj.addLease(lease, fee);
+            const txnGroup = group.assignGroupID([feePayTxnObj, txnObj], undefined);
+            const feePayTxnWithGroup = txnGroup[0];
+            const txnObjWithGroup = txnGroup[1];
+            const lstx = {
+              lsig: lsig.get_obj_for_encoding(),
+              txn: txnObjWithGroup.get_obj_for_encoding()
+            };
+            const stx1 = feePayTxnWithGroup.signTxn(privateKey);
+            const stx2 = encoding.encode(lstx);
+            const concatStx = new Uint8Array(stx1.length + stx2.length);
+            concatStx.set(stx1);
+            concatStx.set(stx2, stx1.length);
+            return concatStx;
+          }
+          module.exports = {
+            DynamicFee,
+            getDynamicFeeTransactions,
+            signDynamicFee
+          };
+        }).call(this);
+      }).call(this, require("buffer").Buffer);
+    }, {
+      "../encoding/address": 164,
+      "../encoding/encoding": 166,
+      "../group": 168,
+      "../logic/logic": 170,
+      "../logicsig": 178,
+      "../nacl/naclWrappers": 184,
+      "../transaction": 186,
+      "./templates": 177,
+      "buffer": 199
+    }],
+    172: [function (require, module, exports) {
+      (function () {
+        (function () {
+          const sha256 = require('js-sha256');
+          const {
+            keccak256
+          } = require('js-sha3');
+          const logic = require('../logic/logic');
+          const logicSig = require('../logicsig');
+          const templates = require('./templates');
+          const transaction = require('../transaction');
+          class HTLC {
+            constructor(owner, receiver, hashFunction, hashImage, expiryRound, maxFee) {
+              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
+              let referenceProgramB64 = '';
+              if (hashFunction === 'sha256') {
+                referenceProgramB64 = 'ASAECAEACSYDIOaalh5vLV96yGYHkmVSvpgjXtMzY8qIkYu5yTipFbb5IH+DsWV/8fxTuS3BgUih1l38LUsfo9Z3KErd0gASbZBpIP68oLsUSlpOp7Q4pGgayA5soQW8tgf8VlMlyVaV9qITMQEiDjEQIxIQMQcyAxIQMQgkEhAxCSgSLQEpEhAxCSoSMQIlDRAREA==';
+              } else if (hashFunction === 'keccak256') {
+                referenceProgramB64 = 'ASAECAEACSYDIOaalh5vLV96yGYHkmVSvpgjXtMzY8qIkYu5yTipFbb5IH+DsWV/8fxTuS3BgUih1l38LUsfo9Z3KErd0gASbZBpIP68oLsUSlpOp7Q4pGgayA5soQW8tgf8VlMlyVaV9qITMQEiDjEQIxIQMQcyAxIQMQgkEhAxCSgSLQIpEhAxCSoSMQIlDRAREA==';
+              } else {
+                throw Error('hash function unrecognized');
+              }
+              const hashImageBytes = Buffer.from(hashImage, 'base64');
+              if (hashImageBytes.length !== 32) throw Error('hash image must be 32 bytes');
+              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
+              const referenceOffsets = [3, 6, 10, 42, 76];
+              const injectionVector = [maxFee, expiryRound, receiver, hashImage, owner];
+              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS, templates.valTypes.BASE64, templates.valTypes.ADDRESS];
+              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
+              this.programBytes = injectedBytes;
+              const lsig = new logicSig.LogicSig(injectedBytes, undefined);
+              this.address = lsig.address();
+            }
+            getProgram() {
+              return this.programBytes;
+            }
+            getAddress() {
+              return this.address;
+            }
+          }
+          function signTransactionWithHTLCUnlock(contract, txn, preImageAsBase64) {
+            const preImageBytes = Buffer.from(preImageAsBase64, 'base64');
+            const readResult = logic.readProgram(contract, undefined);
+            const ints = readResult[0];
+            const byteArrays = readResult[1];
+            const expectedHashedOutput = byteArrays[1];
+            const hashFunction = contract[contract.length - 15];
+            if (hashFunction === 1) {
+              const hash = sha256.create();
+              hash.update(preImageBytes);
+              const actualHashedOutput = Buffer.from(hash.hex(), 'hex');
+              if (!actualHashedOutput.equals(expectedHashedOutput)) {
+                throw new Error('sha256 hash of preimage did not match stored contract hash');
+              }
+            } else if (hashFunction === 2) {
+              const hash = keccak256.create();
+              hash.update(preImageBytes);
+              const actualHashedOutput = Buffer.from(hash.hex(), 'hex');
+              if (!actualHashedOutput.equals(expectedHashedOutput)) {
+                throw new Error('keccak256 hash of preimage did not match stored contract hash');
+              }
+            } else {
+              throw new Error('hash function in contract unrecognized');
+            }
+            const args = [preImageBytes];
+            const lsig = new logicSig.LogicSig(contract, args);
+            delete txn.to;
+            const maxFee = ints[0];
+            const tempTxn = new transaction.Transaction(txn);
+            if (tempTxn.fee > maxFee) {
+              throw new Error(`final fee of payment transaction${tempTxn.fee.toString()}greater than transaction max fee${maxFee.toString()}`);
+            }
+            return logicSig.signLogicSigTransaction(txn, lsig);
+          }
+          module.exports = {
+            HTLC,
+            signTransactionWithHTLCUnlock
+          };
+        }).call(this);
+      }).call(this, require("buffer").Buffer);
+    }, {
+      "../logic/logic": 170,
+      "../logicsig": 178,
+      "../transaction": 186,
+      "./templates": 177,
+      "buffer": 199,
+      "js-sha256": 250,
+      "js-sha3": 251
+    }],
+    173: [function (require, module, exports) {
+      const dynamicFeeTemplate = require('./dynamicfee');
+      const htlcTemplate = require('./htlc');
+      const limitOrderTemplate = require('./limitorder');
+      const splitTemplate = require('./split');
+      const periodicPayTemplate = require('./periodicpayment');
+      module.exports = {
+        DynamicFee: dynamicFeeTemplate.DynamicFee,
+        getDynamicFeeTransactions: dynamicFeeTemplate.getDynamicFeeTransactions,
+        signDynamicFee: dynamicFeeTemplate.signDynamicFee,
+        HTLC: htlcTemplate.HTLC,
+        signTransactionWithHTLCUnlock: htlcTemplate.signTransactionWithHTLCUnlock,
+        LimitOrder: limitOrderTemplate.LimitOrder,
+        getSwapAssetsTransaction: limitOrderTemplate.getSwapAssetsTransaction,
+        Split: splitTemplate.Split,
+        getSplitFundsTransaction: splitTemplate.getSplitFundsTransaction,
+        PeriodicPayment: periodicPayTemplate.PeriodicPayment,
+        getPeriodicPaymentWithdrawalTransaction: periodicPayTemplate.getPeriodicPaymentWithdrawalTransaction
+      };
+    }, {
+      "./dynamicfee": 171,
+      "./htlc": 172,
+      "./limitorder": 174,
+      "./periodicpayment": 175,
+      "./split": 176
+    }],
+    174: [function (require, module, exports) {
+      (function () {
+        (function () {
+          const address = require('../encoding/address');
+          const makeTxn = require('../makeTxn');
+          const group = require('../group');
+          const logic = require('../logic/logic');
+          const logicSig = require('../logicsig');
+          const nacl = require('../nacl/naclWrappers');
+          const templates = require('./templates');
+          const utils = require('../utils/utils');
+          class LimitOrder {
+            constructor(owner, assetid, ratn, ratd, expiryRound, minTrade, maxFee) {
+              if (!Number.isSafeInteger(assetid) || assetid < 0) throw Error('assetid must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(ratn) || ratn < 0) throw Error('ratn must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(ratd) || ratd < 0) throw Error('ratd must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(minTrade) || minTrade < 0) throw Error('minTrade must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
+              const referenceProgramB64 = 'ASAKAAEFAgYEBwgJCiYBIP68oLsUSlpOp7Q4pGgayA5soQW8tgf8VlMlyVaV9qITMRYiEjEQIxIQMQEkDhAyBCMSQABVMgQlEjEIIQQNEDEJMgMSEDMBECEFEhAzAREhBhIQMwEUKBIQMwETMgMSEDMBEiEHHTUCNQExCCEIHTUENQM0ATQDDUAAJDQBNAMSNAI0BA8QQAAWADEJKBIxAiEJDRAxBzIDEhAxCCISEBA=';
+              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
+              const referenceOffsets = [5, 7, 9, 10, 11, 12, 16];
+              const injectionVector = [maxFee, minTrade, assetid, ratd, ratn, expiryRound, owner];
+              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS];
+              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
+              this.programBytes = injectedBytes;
+              const lsig = new logicSig.LogicSig(injectedBytes, undefined);
+              this.address = lsig.address();
+              this.owner = owner;
+              this.assetid = assetid;
+            }
+            getProgram() {
+              return this.programBytes;
+            }
+            getAddress() {
+              return this.address;
+            }
+          }
+          function getSwapAssetsTransaction(contract, assetAmount, microAlgoAmount, secretKey, fee, firstRound, lastRound, genesisHash) {
+            const buyerKeyPair = nacl.keyPairFromSecretKey(secretKey);
+            const buyerAddr = address.encodeAddress(buyerKeyPair.publicKey);
+            const programOutputs = logic.readProgram(contract, undefined);
+            const ints = programOutputs[0];
+            const byteArrays = programOutputs[1];
+            let noCloseRemainder;
+            let noAssetRevocationTarget;
+            const contractAssetID = ints[6];
+            const contractOwner = address.encodeAddress(byteArrays[0]);
+            const lsig = logicSig.makeLogicSig(contract, undefined);
+            const contractAddress = lsig.address();
+            const algosForAssets = makeTxn.makePaymentTxn(contractAddress, buyerAddr, fee, microAlgoAmount, noCloseRemainder, firstRound, lastRound, undefined, genesisHash, undefined);
+            const assetsForAlgos = makeTxn.makeAssetTransferTxn(buyerAddr, contractOwner, noCloseRemainder, noAssetRevocationTarget, fee, assetAmount, firstRound, lastRound, undefined, genesisHash, undefined, contractAssetID);
+            const txns = [algosForAssets, assetsForAlgos];
+            const txGroup = group.assignGroupID(txns);
+            const ratd = ints[7];
+            const ratn = ints[8];
+            if (assetAmount * ratd < microAlgoAmount * ratn) {
+              throw new Error(`bad payment ratio, ${assetAmount.toString()}*${ratd.toString()} !>= ${microAlgoAmount.toString()}*${ratn.toString()}`);
+            }
+            const minTrade = ints[4];
+            if (microAlgoAmount < minTrade) {
+              throw new Error(`payment amount ${microAlgoAmount.toString()} less than minimum trade ${minTrade.toString()}`);
+            }
+            const maxFee = ints[2];
+            if (txGroup[0].fee > maxFee) {
+              throw new Error(`final fee of payment transaction ${txGroup[0].fee.toString()} greater than transaction max fee ${maxFee.toString()}`);
+            }
+            if (txGroup[1].fee > maxFee) {
+              throw new Error(`final fee of asset transaction ${txGroup[1].fee.toString()} greater than transaction max fee ${maxFee.toString()}`);
+            }
+            const algosForAssetsSigned = logicSig.signLogicSigTransactionObject(txGroup[0], lsig);
+            const assetsForAlgosSigned = txGroup[1].signTxn(secretKey);
+            return utils.concatArrays(algosForAssetsSigned.blob, assetsForAlgosSigned);
+          }
+          module.exports = {
+            LimitOrder,
+            getSwapAssetsTransaction
+          };
+        }).call(this);
+      }).call(this, require("buffer").Buffer);
+    }, {
+      "../encoding/address": 164,
+      "../group": 168,
+      "../logic/logic": 170,
+      "../logicsig": 178,
+      "../makeTxn": 180,
+      "../nacl/naclWrappers": 184,
+      "../utils/utils": 194,
+      "./templates": 177,
+      "buffer": 199
+    }],
+    175: [function (require, module, exports) {
+      (function () {
+        (function () {
+          const address = require('../encoding/address');
+          const makeTxn = require('../makeTxn');
+          const logic = require('../logic/logic');
+          const logicSig = require('../logicsig');
+          const nacl = require('../nacl/naclWrappers');
+          const templates = require('./templates');
+          class PeriodicPayment {
+            constructor(receiver, amount, withdrawalWindow, period, expiryRound, maxFee, lease) {
+              this.receiver = receiver;
+              if (!Number.isSafeInteger(amount) || amount < 0) throw Error('amount must be a positive number and smaller than 2^53-1');
+              this.amount = amount;
+              if (!Number.isSafeInteger(withdrawalWindow) || withdrawalWindow < 0) throw Error('withdrawalWindow must be a positive number and smaller than 2^53-1');
+              this.withdrawalWindow = withdrawalWindow;
+              if (!Number.isSafeInteger(period) || period < 0) throw Error('period must be a positive number and smaller than 2^53-1');
+              this.period = period;
+              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
+              this.expiryRound = expiryRound;
+              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
+              this.maxFee = maxFee;
+              if (lease === undefined) {
+                const leaseBytes = nacl.randomBytes(32);
+                this.lease = Buffer.from(leaseBytes).toString('base64');
+              } else {
+                this.lease = lease;
+              }
+              this.programBytes = this.getProgram();
+              const lsig = new logicSig.LogicSig(this.programBytes, undefined);
+              this.address = lsig.address();
+            }
+            getProgram() {
+              const referenceProgramB64 = 'ASAHAQYFAAQDByYCIAECAwQFBgcIAQIDBAUGBwgBAgMEBQYHCAECAwQFBgcIIJKvkYTkEzwJf2arzJOxERsSogG9nQzKPkpIoc4TzPTFMRAiEjEBIw4QMQIkGCUSEDEEIQQxAggSEDEGKBIQMQkyAxIxBykSEDEIIQUSEDEJKRIxBzIDEhAxAiEGDRAxCCUSEBEQ';
+              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
+              const referenceOffsets = [4, 5, 7, 8, 9, 12, 46];
+              const injectionVector = [this.maxFee, this.period, this.withdrawalWindow, this.amount, this.expiryRound, this.lease, this.receiver];
+              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.BASE64, templates.valTypes.ADDRESS];
+              return templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
+            }
+            getAddress() {
+              return this.address;
+            }
+          }
+          function getPeriodicPaymentWithdrawalTransaction(contract, fee, firstValid, genesisHash) {
+            const readResult = logic.readProgram(contract, undefined);
+            const ints = readResult[0];
+            const byteArrays = readResult[1];
+            const period = ints[2];
+            const duration = ints[4];
+            const amount = ints[5];
+            if (firstValid % period !== 0) {
+              throw new Error(`firstValid round ${firstValid.toString()} was not a multiple of contract period ${period.toString()}`);
+            }
+            const receiverBytes = byteArrays[1];
+            const receiver = address.encodeAddress(receiverBytes);
+            const leaseBuffer = byteArrays[0];
+            const lease = new Uint8Array(leaseBuffer);
+            const lastValid = firstValid + duration;
+            const to = receiver;
+            let noCloseRemainder;
+            let noNote;
+            const lsig = logicSig.makeLogicSig(contract, undefined);
+            const from = lsig.address();
+            const txn = {
+              from,
+              to,
+              fee,
+              amount,
+              closeRemainderTo: noCloseRemainder,
+              firstRound: firstValid,
+              lastRound: lastValid,
+              note: noNote,
+              genesisHash,
+              genesisID: '',
+              type: 'pay',
+              lease
+            };
+            const tempTxn = makeTxn.makePaymentTxn(from, to, fee, amount, noCloseRemainder, firstValid, lastValid, noNote, genesisHash, '');
+            if (tempTxn.fee > ints[1]) {
+              throw new Error(`final fee of payment transaction${tempTxn.fee.toString()}greater than transaction max fee${ints[1].toString()}`);
+            }
+            return logicSig.signLogicSigTransaction(txn, lsig);
+          }
+          module.exports = {
+            PeriodicPayment,
+            getPeriodicPaymentWithdrawalTransaction
+          };
+        }).call(this);
+      }).call(this, require("buffer").Buffer);
+    }, {
+      "../encoding/address": 164,
+      "../logic/logic": 170,
+      "../logicsig": 178,
+      "../makeTxn": 180,
+      "../nacl/naclWrappers": 184,
+      "./templates": 177,
+      "buffer": 199
+    }],
+    176: [function (require, module, exports) {
+      (function () {
+        (function () {
+          const address = require('../encoding/address');
+          const makeTxn = require('../makeTxn');
+          const group = require('../group');
+          const logicsig = require('../logicsig');
+          const logic = require('../logic/logic');
+          const templates = require('./templates');
+          const utils = require('../utils/utils');
+          class Split {
+            constructor(owner, receiverOne, receiverTwo, rat1, rat2, expiryRound, minPay, maxFee) {
+              if (!Number.isSafeInteger(rat2) || rat2 < 0) throw Error('rat2 must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(rat1) || rat1 < 0) throw Error('rat1 must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(expiryRound) || expiryRound < 0) throw Error('expiryRound must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(minPay) || minPay < 0) throw Error('minPay must be a positive number and smaller than 2^53-1');
+              if (!Number.isSafeInteger(maxFee) || maxFee < 0) throw Error('maxFee must be a positive number and smaller than 2^53-1');
+              const referenceProgramB64 = 'ASAIAQUCAAYHCAkmAyCztwQn0+DycN+vsk+vJWcsoz/b7NDS6i33HOkvTpf+YiC3qUpIgHGWE8/1LPh9SGCalSN7IaITeeWSXbfsS5wsXyC4kBQ38Z8zcwWVAym4S8vpFB/c0XC6R4mnPi9EBADsPDEQIhIxASMMEDIEJBJAABkxCSgSMQcyAxIQMQglEhAxAiEEDRAiQAAuMwAAMwEAEjEJMgMSEDMABykSEDMBByoSEDMACCEFCzMBCCEGCxIQMwAIIQcPEBA=';
+              const referenceProgramBytes = Buffer.from(referenceProgramB64, 'base64');
+              const referenceOffsets = [4, 7, 8, 9, 10, 14, 47, 80];
+              const injectionVector = [maxFee, expiryRound, rat2, rat1, minPay, owner, receiverOne, receiverTwo];
+              const injectionTypes = [templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.INT, templates.valTypes.ADDRESS, templates.valTypes.ADDRESS, templates.valTypes.ADDRESS];
+              const injectedBytes = templates.inject(referenceProgramBytes, referenceOffsets, injectionVector, injectionTypes);
+              this.programBytes = injectedBytes;
+              const lsig = logicsig.makeLogicSig(injectedBytes, undefined);
+              this.address = lsig.address();
+            }
+            getProgram() {
+              return this.programBytes;
+            }
+            getAddress() {
+              return this.address;
+            }
+          }
+          function getSplitFundsTransaction(contract, amount, firstRound, lastRound, fee, genesisHash) {
+            const programOutputs = logic.readProgram(contract, undefined);
+            const ints = programOutputs[0];
+            const byteArrays = programOutputs[1];
+            let rat2 = ints[6];
+            let rat1 = ints[5];
+            let amountForReceiverOne = 0;
+            const gcdFn = (a, b) => {
+              if (typeof a !== 'number' || typeof b !== 'number') throw new Error('gcd operates only on positive integers');
+              if (!b) {
+                return a;
+              }
+              return gcdFn(b, a % b);
+            };
+            const gcd = gcdFn(rat2, rat1);
+            rat2 = Math.floor(rat2 / gcd);
+            rat1 = Math.floor(rat1 / gcd);
+            const ratio = rat1 / rat2;
+            amountForReceiverOne = Math.round(amount / (1 + ratio));
+            const amountForReceiverTwo = amount - amountForReceiverOne;
+            if (rat1 * amountForReceiverOne !== rat2 * amountForReceiverTwo) {
+              throw Error('could not split funds in a way that satisfied the contract ratio');
+            }
+            const logicSig = logicsig.makeLogicSig(contract, undefined);
+            const from = logicSig.address();
+            const receiverOne = address.encodeAddress(byteArrays[1]);
+            const receiverTwo = address.encodeAddress(byteArrays[2]);
+            const tx1 = makeTxn.makePaymentTxn(from, receiverOne, fee, amountForReceiverOne, undefined, firstRound, lastRound, undefined, genesisHash);
+            const tx2 = makeTxn.makePaymentTxn(from, receiverTwo, fee, amountForReceiverTwo, undefined, firstRound, lastRound, undefined, genesisHash);
+            const txns = [tx1, tx2];
+            const txGroup = group.assignGroupID(txns);
+            const signedTxns = txGroup.map(txn => logicsig.signLogicSigTransactionObject(txn, logicsig).blob);
+            return utils.concatArrays(signedTxns[0], signedTxns[1]);
+          }
+          module.exports = {
+            Split,
+            getSplitFundsTransaction
+          };
+        }).call(this);
+      }).call(this, require("buffer").Buffer);
+    }, {
+      "../encoding/address": 164,
+      "../group": 168,
+      "../logic/logic": 170,
+      "../logicsig": 178,
+      "../makeTxn": 180,
+      "../utils/utils": 194,
+      "./templates": 177,
+      "buffer": 199
+    }],
+    177: [function (require, module, exports) {
+      (function () {
+        (function () {
+          const address = require('../encoding/address');
+          function putUvarint(buf, x) {
+            let i = 0;
+            while (x > 0x80) {
+              buf.push(x & 0xff | 0x80);
+              x >>= 7;
+              i += 1;
+            }
+            buf.push(x & 0xff);
+            return i + 1;
+          }
+          const valTypes = {
+            INT: 1,
+            ADDRESS: 2,
+            BASE64: 3
+          };
+          function inject(orig, offsets, values, valueTypes) {
+            if (offsets.length !== values.length || offsets.length !== valueTypes.length) {
+              throw new Error('Lengths do not match');
+            }
+            let res = orig;
+            function replace(arr, newVal, offset, placeholderLength) {
+              const beforeReplacement = arr.slice(0, offset);
+              const afterReplacement = arr.slice(offset + placeholderLength, arr.length);
+              const chunks = [beforeReplacement, Buffer.from(newVal), afterReplacement];
+              return Buffer.concat(chunks);
+            }
+            for (let i = 0; i < offsets.length; i++) {
+              let decodedLength = 0;
+              let val = values[i];
+              const valType = valueTypes[i];
+              switch (valType) {
+                case valTypes.INT:
+                  const intBuf = [];
+                  decodedLength = putUvarint(intBuf, val);
+                  res = replace(res, intBuf, offsets[i], 1);
+                  break;
+                case valTypes.ADDRESS:
+                  val = address.decodeAddress(val);
+                  res = replace(res, val.publicKey, offsets[i], 32);
+                  break;
+                case valTypes.BASE64:
+                  const lenBuf = [];
+                  val = Buffer.from(val, 'base64');
+                  putUvarint(lenBuf, val.length);
+                  val = Buffer.concat([Buffer.from(lenBuf), val]);
+                  res = replace(res, val, offsets[i], 33);
+                  break;
+                default:
+                  throw new Error('unrecognized value type');
+              }
+              if (decodedLength !== 0) {
+                for (let o = 0; o < offsets.length; o++) {
+                  offsets[o] += decodedLength - 1;
+                }
+              }
+            }
+            return res;
+          }
+          module.exports = {
+            inject,
+            valTypes
+          };
+        }).call(this);
+      }).call(this, require("buffer").Buffer);
+    }, {
+      "../encoding/address": 164,
+      "buffer": 199
     }],
     178: [function (require, module, exports) {
       (function () {
@@ -18934,7 +18934,7 @@
     }, {
       "./encoding/address": 164,
       "./encoding/encoding": 166,
-      "./logic/logic": 177,
+      "./logic/logic": 170,
       "./multisig": 183,
       "./nacl/naclWrappers": 184,
       "./transaction": 186,
@@ -19293,7 +19293,7 @@
       "./encoding/encoding": 166,
       "./encoding/uint64": 167,
       "./group": 168,
-      "./logicTemplates": 171,
+      "./logicTemplates": 173,
       "./logicsig": 178,
       "./makeTxn": 180,
       "./mnemonic/mnemonic": 181,
@@ -42534,9 +42534,7 @@
                 }
                 let txnBuffer = Buffer.from(txn.txn, 'base64');
                 let decoded_txn = algosdk.decodeUnsignedTransaction(txnBuffer);
-                console.log(decoded_txn);
                 let verifiedObj = Txn_Verifer.verifyTxn(decoded_txn, await this.walletFuncs.getSpendable());
-                console.log(verifiedObj);
                 if (txn.message) {
                   const msgConfirmation = await _Utils.default.sendConfirmation("Untrusted Message", originString + " says:", txn.message);
                   if (!msgConfirmation) {
@@ -42708,10 +42706,9 @@
           const msg = await fetch(combinedURL);
           actions = await msg.json();
         } catch (e) {
-          console.log("no warning file for this version");
+          console.error("no warning file for this version");
           return true;
         }
-        console.log(actions);
         if (!actions.action) {
           return true;
         }
@@ -42818,17 +42815,12 @@
         }
         static toSmallestUnit(amount, ticker) {
           amount = new BigNumber(amount);
-          console.log("here");
           const output = amount.times(new BigNumber(10).exponentiatedBy(chains[ticker].data.nativeCurrency.decimals)).toFixed();
-          console.log(output);
           return output;
         }
         async sendEvm(to, wei, ticker) {
-          console.log("sending evem");
-          console.log("ticker is ", ticker);
           await this.switchChain(ticker);
           const amount = '0x' + BigInt(wei).toString(16);
-          console.log("selectedAddress is");
           if (this.ethereum.selectedAddress === null) {
             await this.ethereum.request({
               method: 'eth_requestAccounts'
@@ -42848,12 +42840,7 @@
           return txHash;
         }
         async sendSnap(to, amount, ticker) {
-          console.log("changenow address is ...");
-          console.log("ticker is ", ticker);
-          console.log(to);
           amount = BigInt(amount);
-          console.log("amount is");
-          console.log(amount);
           if (ticker === "algo") {
             await this.walletFuncs.transfer(to, amount);
           }
@@ -42910,7 +42897,6 @@
             "action": "status",
             "id": transactionId
           });
-          console.log(data.body);
           return data.body;
         }
         async preSwap(from, to, amount) {
@@ -42931,7 +42917,6 @@
             "to": chains[to].changeNowName,
             "amount": amount
           });
-          console.log(data);
           return data.body;
         }
         async swap(from, to, amount, email) {
@@ -42949,11 +42934,7 @@
           let outputAddress = null;
           if (chains[to].type === "snap") {
             outputAddress = this.algoWallet.getAddress();
-            console.log(outputAddress);
           } else if (chains[to].type === "imported" || chains[to].type === "native") {
-            console.log("to currency and type");
-            console.log(chains[to]);
-            console.log(chains[to].type);
             if (chains[to].type === "imported") {
               await this.switchChain(to);
             }
@@ -42971,9 +42952,7 @@
             "addr": outputAddress,
             "email": email ? email : ""
           });
-          console.log(swapData);
           if (swapData.body.error === "true") {
-            console.log("here");
             _Utils.default.throwError(500, JSON.stringify(swapData.body));
           }
           swapData.body.link = "https://changenow.io/exchange/txs/" + swapData.body.id;
@@ -42983,22 +42962,14 @@
             return _Utils.default.throwError(4300, "User Rejected Request");
           }
           if (swapData.body.error) {
-            console.log("there is an error");
             return _Utils.default.throwError(500, "Error in Swap");
           }
           const sendAmount = Swapper.toSmallestUnit(amount, from);
-          console.log('converted send amount is: ');
-          console.log(sendAmount);
-          console.log(swapData.body.payinAddress);
           if (chains[from].type === "imported" || chains[from].type === "native") {
-            console.log("chains[from] is ", chains[from]);
             await this.sendEvm(swapData.body.payinAddress, sendAmount, from, outputAddress);
           }
           if (chains[from].type === "snap") {
-            console.log("here");
-            console.log(sendAmount);
             await this.sendSnap(swapData.body.payinAddress, sendAmount, from);
-            console.log("send successful");
           }
           let state = await this.snap.request({
             method: 'snap_manageState',
@@ -43006,11 +42977,8 @@
               operation: 'get'
             }
           });
-          console.log("state is");
-          console.log(state);
-          console.log(state[state.currentAccountId]);
           if (state.Accounts[state.currentAccountId].swaps == undefined) {
-            console.log("swap history for this address is undefined");
+            console.error("swap history for this address is undefined");
             state.Accounts[state.currentAccountId].swaps = [swapData.body];
           } else {
             state.Accounts[state.currentAccountId].swaps.unshift(swapData.body);
@@ -43069,7 +43037,6 @@
               this.thrower(4300, 'Required field missing: ' + requirement);
             } else {
               if (requirement === "fee") {
-                console.log("checking requirement FEE");
                 let fee = requirement;
                 if (!this.checkInt({
                   value: txn[fee],
@@ -43086,7 +43053,6 @@
                 }
               }
               if (requirement === "firstRound") {
-                console.log("checking requirement firstRound");
                 if (!this.checkInt({
                   value: txn[requirement],
                   min: 1
@@ -43095,7 +43061,6 @@
                 }
               }
               if (requirement === "genesisHash") {
-                console.log("checking requirement genesisHash");
                 if (txn[requirement] instanceof Uint32Array) {
                   this.thrower(4300, 'genesisHash must be Uint32Array');
                 }
@@ -43105,7 +43070,6 @@
                 }
               }
               if (requirement === "lastRound") {
-                console.log("checking requirement lastRound");
                 if (!this.checkInt({
                   value: txn[requirement],
                   min: 1
@@ -43117,13 +43081,11 @@
                 }
               }
               if (requirement === "from") {
-                console.log("checking requirement from");
                 if (!this.checkAddress(txn[requirement])) {
                   this.thrower(4300, 'from must be a valid sender address');
                 }
               }
               if (requirement === "type") {
-                console.log("checking requirement type");
                 if (!this.checkString({
                   value: txn[requirement]
                 })) {
@@ -43327,16 +43289,12 @@
               this.errorCheck.info.push(`type:Asset Freeze\nasset id:${txn.assetIndex}\nfee:${txn.fee}`);
             } else if (txn.type === "appl") {
               if (txn.hasOwnProperty('appApprovalProgram') && txn.hasOwnProperty('appClearProgram') && txn.hasOwnProperty('appGlobalByteSlices') && txn.hasOwnProperty('appGlobalInts') && txn.hasOwnProperty('appLocalByteSlices') && txn.hasOwnProperty('appLocalInts')) {
-                console.log('appl create');
                 this.errorCheck.info.push(`type:Application Create\nfee:${txn.fee}`);
               } else if (txn.hasOwnProperty('appIndex') && txn.hasOwnProperty('appOnComplete')) {
-                console.log('appl call');
                 this.errorCheck.info.push(`type:Application Call\napp id:${txn.appIndex}\nfee:${txn.fee}`);
               } else if (txn.hasOwnProperty('appIndex') && txn.hasOwnProperty('appApprovalProgram') && txn.hasOwnProperty('appClearProgram')) {
-                console.log('appl update');
                 this.errorCheck.info.push(`type:Application Update\napp id:${txn.appIndex}\nfee:${txn.fee}`);
               } else if (txn.hasOwnProperty('appIndex')) {
-                console.log('appl clearState, closeOut, delete, noOp, or optIn txn');
                 this.errorCheck.info.push(`type:Application Transaction\napp id:${txn.appIndex}\nfee:${txn.fee}`);
               } else {
                 this.thrower(4300, 'all required fields need to be filled depending on the target ApplicationTxn');
@@ -43520,7 +43478,7 @@
           if (code === undefined) {
             code = 0;
           }
-          console.log(JSON.stringify(msg));
+          console.error(JSON.stringify(msg));
           throw new Error(`${code}\n${msg}`);
         }
         static async notify(message) {
@@ -43541,8 +43499,7 @@
             });
             return true;
           } catch (e) {
-            console.log("error - ");
-            console.log(e);
+            console.error(e);
             await Utils.sendConfirmation("alert", "notifcation", message);
             return false;
           }
@@ -43772,7 +43729,7 @@
                 txId = _classPrivateMethodGet(this, _signAndPost, _signAndPost2).call(this, txn, algod);
                 await algosdk.waitForConfirmation(algod, txId, 4);
               } catch (e) {
-                console.log(e);
+                console.error(e);
                 await _Utils.default.notify("opt out Failed");
                 return _Utils.default.throwError(e);
               }
@@ -43823,7 +43780,7 @@
                 txId = _classPrivateMethodGet(this, _signAndPost, _signAndPost2).call(this, txn, algod);
                 await algosdk.waitForConfirmation(algod, txId, 4);
               } catch (e) {
-                console.log("failed");
+                console.error(e);
                 await _Utils.default.notify("Opt In Failed");
                 return _Utils.default.throwError(e);
               }

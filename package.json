@@ -1,9 +1,10 @@
 {
   "name": "@algorandfoundation/algorand-metamask-snap",
-  "version": "10.0.0",
+  "version": "10.0.1",
   "description": "Metamask snap for Algorand",
   "main": "src/index.js",
   "scripts": {
+    "build": "yarn mm-snap build",
     "test": "yarn build && yarn serve",
     "postinstall": "patch-package",
     "testUseWallet": "npx mm-snap build && npx mm-snap serve --root=useWalletIntegration_test/"
