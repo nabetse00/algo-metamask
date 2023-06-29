@@ -1,5 +1,5 @@
 {
-  "version": "10.0.0",
+  "version": "10.0.1",
   "description": "Algorand on Metamask",
   "proposedName": "algorand",
   "repository": {
@@ -7,12 +7,12 @@
     "url": "https://github.com/algorandfoundation/algo-metamask"
   },
   "source": {
-    "shasum": "LpGf8y92FHQfuZXp+JM3/1CKJANZhPWLUwyYIfZ5W+I=",
+    "shasum": "Pyhm1ySicfZ1c6dk+6e3U3rLtTDlyqGWHQXlxN85cu8=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
         "iconPath": "images/logo.svg",
-        "packageName": "algorand",
+        "packageName": "@algorandfoundation/algorand-metamask-snap",
         "registry": "https://registry.npmjs.org"
       }
     }
