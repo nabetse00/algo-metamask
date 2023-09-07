@@ -1,7 +1,7 @@
 {
   "name": "@algorandfoundation/algorand-metamask-snap",
-  "version": "10.0.1",
-  "description": "Metamask snap for Algorand",
+  "version": "10.0.2",
+  "description": "Snap for interacting with the Algorand ecosystem via Metamask. Algorand is a scalable layer-1 blockchain powered by the Pure Proof-of-Stake consensus mechanism with quick block times and instant finality.",
   "main": "src/index.js",
   "scripts": {
     "build": "yarn mm-snap build",

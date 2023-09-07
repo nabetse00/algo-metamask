@@ -1,13 +1,13 @@
 {
-  "version": "10.0.1",
+  "version": "10.0.2",
   "description": "Algorand on Metamask",
-  "proposedName": "algorand",
+  "proposedName": "Algorand Wallet",
   "repository": {
     "type": "git",
     "url": "https://github.com/algorandfoundation/algo-metamask"
   },
   "source": {
-    "shasum": "Pyhm1ySicfZ1c6dk+6e3U3rLtTDlyqGWHQXlxN85cu8=",
+    "shasum": "Ac+HbVc2OlKU9zIGvp7JzHfuyNh4u1hiE3EC/tHIER0=",
     "location": {
       "npm": {
         "filePath": "dist/bundle.js",
