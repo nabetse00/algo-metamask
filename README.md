@@ -6,13 +6,27 @@ SnapAlgo is an Algorand wallet built on metamask developmental snaps feature whi
 
 ## Usage
 ### building
+> npx yarn
 > npx mm-snap build
+if a `Removing intrinsics.Symbol.dispose failed to delete intrinsics.Symbol.dispose`
+error is emited just discard it, only check `Build success: 'src\index.js' bundled as 'dist\bundle.js'!`
 
 compiles the src folder into a functional version of the snap
 ### serving
+
+Update manifest "shasum" first
+
+> npx mm-snap manifest --fix
+
 > npx mm-snap serve
 
-Serves index.html on port 3000
+Serves index.html on port 9000
+Can be changed in [snap.config.js](./snap.config.js)
+
+Command does both and watchs file changes
+
+> npx mm-snap watch
+
 ### sdk
 It is possible to use an sdk to simplify using snapalgo.
 [repository](https://github.com/Kyraview/SnapAlgoSDK)
