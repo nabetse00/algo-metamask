@@ -311,7 +311,7 @@
 
     async function signData(){
       // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
-      let thing = document.getElementById('data').value;
+      let data = document.getElementById('data').value;
       let sig = await ethereum.request({
         method: 'wallet_invokeSnap',
         params: {
@@ -319,7 +319,7 @@
           request: {
             method: 'signData',
             params:{
-              message: thing
+              message: data
             }
           }
         }        
@@ -331,7 +331,7 @@
     async function encryptMessage(){
       console.log("encrypt message")
       // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
-      let thing = document.getElementById('data').value;
+      let data = document.getElementById('data').value;
       let enc = await ethereum.request({
         method: 'wallet_invokeSnap',
         params: {
@@ -339,7 +339,7 @@
           request: {
             method: 'encryptMessage',
             params:{
-              message: thing
+              message: data
             }
           }
         }        
@@ -351,7 +351,7 @@
     async function decryptMessage(){
       console.log("decrypt message")
       // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
-      let thing = document.getElementById('data').value;
+      let cipher = document.getElementById('data').value;
       let dec = await ethereum.request({
         method: 'wallet_invokeSnap',
         params: {
@@ -359,7 +359,7 @@
           request: {
             method: 'decryptMessage',
             params:{
-              message: thing
+              message: cipher
             }
           }
         }        

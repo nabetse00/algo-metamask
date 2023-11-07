@@ -234,22 +234,29 @@ module.exports.onRpcRequest = async ({origin, request}) => {
       //return await swapper.getStatus(params.id);
     
     // signData
+    // retruns base64(signature)
     case 'signData':
       return await walletFuncs.signData(params.message)
 
     // encryptMessage
+    // returns base64(cipjer + nonce)
     case 'encryptMessage':
       return await walletFuncs.encryptMessage(params.message)
 
     // decryptMessage
+    // message = base64(cipher + nonce)
+    // returns message as str
     case 'decryptMessage':
       return await walletFuncs.decryptMessage(params.message)
 
     // PublicKeyEncryptMessage
+    // public_key is a hex encoded string
     case 'PublicKeyEncryptMessage':
         return await walletFuncs.publicKeyEncryptMessage(params.message, params.public_key)
 
-    // OublicKeyDecryptMessage
+    // PublicKeyDecryptMessage
+    // public_key is a hex encoded string
+    // retruns message as str
     case 'PublicKeyDecryptMessage':
         return await walletFuncs.decryptMessage(params.message, params.public_key)
 

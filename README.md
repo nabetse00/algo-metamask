@@ -23,9 +23,10 @@ Update manifest "shasum" first
 Serves index.html on port 9000
 Can be changed in [snap.config.js](./snap.config.js)
 
-Command does both and watchs file changes
+This Command does both on file changes
 
 > npx mm-snap watch
+
 
 ### Connect and Install
 Add and Call the below function to connect to the wallet.
@@ -67,7 +68,127 @@ const response = await window.ethereum.request({
   },
 });
 ```
-### Available RPC Methods
+
+
+## Available RPC Methods
+---
+## Cryptographic functions
+
+Uses your private and public key to perform some cryptographic functions:
+- sign a message (ed25519)
+- encrypt / decrypt a message (xsalsa20-poly1305)
+- Public-key authenticated encryption and de(x25519-xsalsa20-poly1305)
+
+### signData
+This function signs a message with your key pair.
+Returns signature base64 encoded
+
+```javascript
+   async function signData(){
+      let sig = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'signData',
+            params:{
+              message: 'your message'
+            }
+          }
+        }        
+      })
+      return sig
+    }
+```
+
+### encryptMessage
+This function encrypts a message with your private key.
+Encoded message is base64(cipher + nonce)
+
+```javascript
+    async function encryptMessage(){    
+      let enc = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'encryptMessage',
+            params:{
+              message: 'your message'
+            }
+          }
+        }        
+      })
+      return enc
+    }
+```
+
+### decryptMessage
+This function decrypts a message encoded with your private key
+messge format is base64(cipher + nonce). Returns decode message string.
+```javascript
+    async function decryptMessage(){
+      let dec = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'decryptMessage',
+            params:{
+              message: "base64(cipher + nonce)"
+            }
+          }
+        }        
+      })
+      return dec
+    }
+
+```
+
+### PublicKeyEncryptMessage
+This function encrypts a message with provided public key and your private key.
+Encoded message is base64 encoded concatenation of ciphertext and nonce
+
+```javascript
+async function PublicKeyEncryptMessage(){
+      let dec = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'PublicKeyEncryptMessage',
+            params:{
+              message: "your message",
+              public_key: "<pk hex encoded str>"
+            }
+          }
+        }        
+      })
+      return dec
+    }
+```
+### PublicKeyDecryptMessage
+This function decrypts a message from the given public key and your private key.
+Encripted messge must be base64 encoded ie  base64(cipher + nonce).
+Result is decoded message as a string.
+```javascript    
+    async function PublicKeyDecryptMessage(){
+      let dec = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'PublicKeyDecryptMessage',
+            params:{
+              message: 'base 64 encoded cipher text',
+              public_key: "<pk hex encoded str>"
+            }
+          }
+        }        
+      })
+      return dec
+    }
+```
 
 ---
 ## Account functions
