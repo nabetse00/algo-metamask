@@ -42,14 +42,14 @@ function encryptNACL(secretKey, message) {
   fullMessage.set(nonce);
   fullMessage.set(encryptedMessage, nonce.length);
 
-  const base64Encoded = buffer.from(fullMessage).toString('base64');
+  const base64Encoded = Buffer.from(fullMessage).toString('base64');
   return base64Encoded;
 }
 
 // Function for Decrypting Data using TweetNaCl:
 function decryptNACL(secretKey, encryptedData) {
   const secretKeyUint8Array = new Uint8Array(secretKey);
-  const messageWithNonceAsBuffer = buffer.from(encryptedData, 'base64');
+  const messageWithNonceAsBuffer = Buffer.from(encryptedData, 'base64');
   const messageWithNonceAsUint8Array = new Uint8Array(messageWithNonceAsBuffer);
 
   const nonce = messageWithNonceAsUint8Array.slice(0, 24);

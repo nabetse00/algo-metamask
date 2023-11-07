@@ -1,6 +1,6 @@
+import nacl from 'tweetnacl';
 const algosdk =  require('algosdk/dist/cjs');
 import Utils from './Utils';
-const BigNumber = require('bignumber.js');
 import { panel,  copyable, heading, text, divider } from '@metamask/snaps-ui';
 export default class WalletFuncs{
     
@@ -102,8 +102,177 @@ export default class WalletFuncs{
         return true;
     }
 
+    async signData(message){
+
+        const confirm = await Utils.sendConfirmation(
+            "confirm",
+            `Are you sure you want to sign this message:`,
+            `${JSON.stringify(message)}`
+        )
+
+        if(!confirm){
+            Utils.throwError(4001, "user rejected signData Request");
+        }
+        const sk = new Uint8Array(this.wallet.sk);
+        const message_ = new TextEncoder().encode(message);
+        const sig = nacl.sign(message_, sk)
+        const base64Encoded = Buffer.from(sig).toString('base64');
+
+        await Utils.displayPanel(
+            panel([
+                heading("Signature is:"),
+                copyable(base64Encoded),
+            ]), "alert"
+        )
+        
+        // return base64 signature
+        return base64Encoded;
+    }
+
+    async encryptMessage(message){
+
+        const confirm = await Utils.sendConfirmation(
+            "confirm",
+            `Are you sure you want to encrypt this message:`,
+            `${JSON.stringify(message)}`
+        )
+
+        if(!confirm){
+            Utils.throwError(4001, "user rejected encryptMessage Request");
+        }
+        const sk = new Uint8Array(this.wallet.sk);
+        const secretKeyUint8Array = sk.slice(0,32);
+        const nonce = nacl.randomBytes(24);
+        const messageUint8Array = new TextEncoder().encode(message);      
+        const encryptedMessage = nacl.secretbox(messageUint8Array, nonce, secretKeyUint8Array);
+        const fullMessage = new Uint8Array(nonce.length + encryptedMessage.length);
+        fullMessage.set(encryptedMessage);
+        fullMessage.set(nonce, encryptedMessage.length);
+        const base64Encoded = Buffer.from(fullMessage).toString('base64');
+      
+        await Utils.displayPanel(
+            panel([
+                heading("Encrypted message is: "),
+                copyable(base64Encoded),
+            ]), "alert"
+        )
+        
+        // return base64 signature
+        return base64Encoded;
+    }
+
+    async decryptMessage(cipher){
+
+        const confirm = await Utils.sendConfirmation(
+            "confirm",
+            `Are you sure you want to decrypt this message:`,
+            `${JSON.stringify(cipher)}`
+        )
+
+        if(!confirm){
+            Utils.throwError(4001, "user rejected decryptMessage Request");
+        }
+        const sk = new Uint8Array(this.wallet.sk);
+        const secretKeyUint8Array = sk.slice(0,32);
+        const cipherUint8Array = new Uint8Array(Buffer.from(cipher, "base64"))
+        const nonce = cipherUint8Array.slice(-24); // last 24 bytes are nonce
+        const box = cipherUint8Array.slice(0, -24);
+        const msg = nacl.secretbox.open(box, nonce, secretKeyUint8Array);
+
+        const msg_str = new TextDecoder().decode(msg);
+        
+        if(msg == null){
+            Utils.throwError(4001, "Failed decryptMessage Request");
+        }
+      
+        await Utils.displayPanel(
+            panel([
+                heading("Decrypted message is: "),
+                copyable(msg_str),
+            ]), "alert"
+        )
+        
+        // return base64 signature
+        return msg_str;
+    }
     
-    
+
+    async publicKeyEncryptMessage(message, public_key){
+
+        const confirm = await Utils.sendConfirmation(
+            "confirm",
+            `Are you sure you want to encrypt this message?`,
+            `message: \n ${JSON.stringify(message)} \n public key: \n ${public_key}`
+        )
+
+        
+        if(!confirm){
+            Utils.throwError(4001, "user rejected PublicKeyencryptMessage Request");
+        }
+
+        const sk = new Uint8Array(this.wallet.sk);
+        const secretKeyUint8Array = sk.slice(0,32);
+
+        const pkUint8Array = new Uint8Array(Buffer.from(public_key, 'hex'));
+
+        const messageUint8Array = new TextEncoder().encode(message);
+        const nonce = nacl.randomBytes(24);
+
+        const encUint8Array = nacl.box(messageUint8Array, nonce, pkUint8Array, secretKeyUint8Array)
+        const fullMessage = new Uint8Array(nonce.length + encUint8Array.length);
+        fullMessage.set(encUint8Array);
+        fullMessage.set(nonce, encUint8Array.length);
+
+        const base64Encoded = Buffer.from(fullMessage).toString('base64');
+
+        await Utils.displayPanel(
+            panel([
+                heading("Public Key Encrypted message is: "),
+                copyable(base64Encoded),
+            ]), "alert"
+        )
+        return base64Encoded
+    }
+
+    async publicKeyDecryptMessage(cipher, public_key){
+
+        const confirm = await Utils.sendConfirmation(
+            "confirm",
+            `Are you sure you want to decrypt this message:`,
+            `${JSON.stringify(cipher)}`,
+            `With this public key: `,
+            `${public_key}`
+        )
+
+        
+        if(!confirm){
+            Utils.throwError(4001, "user rejected PublicKeyencryptMessage Request");
+        }
+
+        const cipherUint8Array = new Uint8Array(Buffer.from(cipher, "base64"))
+        const nonce = cipherUint8Array.slice(-24); // last 24 bytes are nonce
+        const box = cipherUint8Array.slice(0, -24);
+
+        const sk = new Uint8Array(this.wallet.sk);
+        const secretKeyUint8Array = sk.slice(0,32);
+
+        const pkUint8Array = new Uint8Array(Buffer.from(public_key, 'hex'));
+        const msg = nacl.box.open(box, nonce, pkUint8Array, secretKeyUint8Array)
+
+        if(msg == null){
+            Utils.throwError(4001, "Failed PublicKeyDecryptMessage Request");
+        }
+
+        const msg_str = new TextDecoder().decode(msg);
+
+        await Utils.displayPanel(
+            panel([
+                heading("Public Key Decrypted message is: "),
+                copyable(msg_str),
+            ]), "alert"
+        )
+        return msg_str
+    }
     
     
     async transfer(receiver, amount, note){

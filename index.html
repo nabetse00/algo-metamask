@@ -3,14 +3,11 @@
   </head>
     <title>Hello, Snaps!</title>
     <link rel="icon" type="image/svg" href="./images/icon.svg"/>
-    <script src="encoding-indexes.js"></script>
-    <script src="encoding.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/algosdk@1.16.0/dist/browser/algosdk.min.js"></script>
     
   </head>
 
   <body>
-    <a href="/useWalletIntegration_test/index.html">testUseWallet</a>
     <h1>Algorand On Metamask Proof of Concept</h1>
     <h2>(testnet)</h2>
     <details>
@@ -47,11 +44,29 @@
     <div id="transactionOutput" style="overflow-y: scroll;"></div>
     <p>Sign data</p>
     <input id="data"/>
+    <br/>
+    <p>Example sk:</p>
+    <p>092aad57275feea81b8a64917dc237450007bf985ed53ecf4b2a2b27e59e9a89</p>
+    <p>Example pk:</p>
+    <p>dc952fff8f836e7775e4f46add529ca060c4e0e146a7c4636939ccf8b80597f2</p>
+    <label>public key input: </label>
+    <input id="pk"/>
+    <br/>
+    <p>results: </p>
+    <div style="width:400px; max-width: 400px; word-break: break-all;" id="signature">
+    </div> 
+    <p>Functions</p>
     <button id="signButton">sign</button>
+    <button id="encryptButton">encrypt</button>
+    <button id="decryptButton">decrypt</button>
+    <hr/>
+    <button id="PublicKeyEncryptButton">pk encrypt</button>
+    <button id="PublicKeyDecryptButton">pk decrypt</button>
+    <hr/>
     <button id="getindexServerButton">getIndexServer</button>
     <button id="signTxnsButton">signTxns</button>
     <button id="toBase64Button">toBase64</button>
-
+    <hr/>
     <button id="optInButton">opt in</button>
     <button id="optOutButton">opt out</button>
     <button id="getAssetsButton">get Assets</button>
@@ -88,14 +103,13 @@
       <input id="transactionStatusInput" placeholder="changenow transaction id"/>
       <button id="getStatusButton">get Status</button>
     </div>
-    <script src="sdk/index_bundle.js"></script>
   </body>
 
   <script>
     
     //const snapId = `npm:algorand`;
     const snapId = `local:${window.location.href}`;
-    let snapAlgo = new SnapAlgo.Wallet(snapId);
+    //let snapAlgo = new SnapAlgo.Wallet(snapId);
 
     const connectButton = document.querySelector('button.connect')
     const sendButton = document.querySelector('button.showMnemonic')
@@ -108,6 +122,10 @@
     const testAddressButton = document.querySelector('button.testAddress')
     const data = document.getElementById('data')
     const signButton = document.getElementById('signButton')
+    const encryptButton = document.getElementById('encryptButton')
+    const decryptButton = document.getElementById('decryptButton')
+    const PublicKeyEncryptButton = document.getElementById('PublicKeyEncryptButton')
+    const PublicKeyDecryptButton = document.getElementById('PublicKeyDecryptButton')
     const toBase64Button = document.getElementById('toBase64Button')
     const getIndexServerButton = document.getElementById('getindexServerButton')
     const signTxnsButton = document.getElementById('signTxnsButton')
@@ -146,6 +164,10 @@
     getAddressButton.addEventListener('click', getAddress)
     transactionButton.addEventListener('click', getTransactions)
     signButton.addEventListener('click', signData)
+    encryptButton.addEventListener('click', encryptMessage)
+    decryptButton.addEventListener('click', decryptMessage)
+    PublicKeyEncryptButton.addEventListener('click', PublicKeyEncryptMessage)
+    PublicKeyDecryptButton.addEventListener('click', PublicKeyDecryptMessage)
     getIndexServerButton.addEventListener('click', getIndexServer)
     signTxnsButton.addEventListener('click', signTxns)
     toBase64Button.addEventListener('click', toBase64)
@@ -288,7 +310,8 @@
     }
 
     async function signData(){
-      let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
+      // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
+      let thing = document.getElementById('data').value;
       let sig = await ethereum.request({
         method: 'wallet_invokeSnap',
         params: {
@@ -296,12 +319,98 @@
           request: {
             method: 'signData',
             params:{
-              data: thing
+              message: thing
             }
           }
         }        
       })
+      console.log(`got signature: ${JSON.stringify(sig)}`)
       document.getElementById('signature').innerText = JSON.stringify(sig);
+    }
+
+    async function encryptMessage(){
+      console.log("encrypt message")
+      // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
+      let thing = document.getElementById('data').value;
+      let enc = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'encryptMessage',
+            params:{
+              message: thing
+            }
+          }
+        }        
+      })
+      console.log(`encrypted: ${JSON.stringify(enc)}`)
+      document.getElementById('signature').innerText = JSON.stringify(enc);
+    }
+
+    async function decryptMessage(){
+      console.log("decrypt message")
+      // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
+      let thing = document.getElementById('data').value;
+      let dec = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'decryptMessage',
+            params:{
+              message: thing
+            }
+          }
+        }        
+      })
+      console.log(`decrypted: ${JSON.stringify(dec)}`)
+      document.getElementById('signature').innerText = JSON.stringify(dec);
+    }
+
+    async function PublicKeyEncryptMessage(){
+      console.log("pk encrypt message")
+      // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
+      let msg_data = document.getElementById('data').value;
+      let pk = document.getElementById('pk').value;
+      let dec = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'PublicKeyEncryptMessage',
+            params:{
+              message: msg_data,
+              public_key:pk
+            }
+          }
+        }        
+      })
+      console.log(`pk encrypted: ${JSON.stringify(dec)}`)
+      document.getElementById('signature').innerText = JSON.stringify(dec);
+    }
+
+    
+    async function PublicKeyDecryptMessage(){
+      console.log("pk decrypt message")
+      // let thing = new Uint8Array(new TextEncoder().encode(document.getElementById('data').value));
+      let msg_data = document.getElementById('data').value;
+      let pk = document.getElementById('pk').value;
+      let dec = await ethereum.request({
+        method: 'wallet_invokeSnap',
+        params: {
+          snapId: snapId, 
+          request: {
+            method: 'PublicKeyDecryptMessage',
+            params:{
+              message: msg_data,
+              public_key:pk
+            }
+          }
+        }        
+      })
+      console.log(`pk decrypted: ${JSON.stringify(dec)}`)
+      document.getElementById('signature').innerText = JSON.stringify(dec);
     }
     
     async function toBase64(){

@@ -27,13 +27,6 @@ Command does both and watchs file changes
 
 > npx mm-snap watch
 
-### sdk
-It is possible to use an sdk to simplify using snapalgo.
-[repository](https://github.com/Kyraview/SnapAlgoSDK)
-This creates a floating wallet on the dapp for better user experence.
-As well as creating an easier developer experence by not requiring the
-developer to call raw rpc functions.
-
 ### Connect and Install
 Add and Call the below function to connect to the wallet.
 If the user does not have the snap installed, but has metamask flask installed this code will automaticly install it for them. **This code snippet can be added to any website with 0 depenancies otheer than metamask flask**

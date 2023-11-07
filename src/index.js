@@ -232,7 +232,26 @@ module.exports.onRpcRequest = async ({origin, request}) => {
     case 'getSwapStatus':
       return await Utils.sendAlert("In Progress", "Swapping functions will be available in a future release but is currently depracted")
       //return await swapper.getStatus(params.id);
-      
+    
+    // signData
+    case 'signData':
+      return await walletFuncs.signData(params.message)
+
+    // encryptMessage
+    case 'encryptMessage':
+      return await walletFuncs.encryptMessage(params.message)
+
+    // decryptMessage
+    case 'decryptMessage':
+      return await walletFuncs.decryptMessage(params.message)
+
+    // PublicKeyEncryptMessage
+    case 'PublicKeyEncryptMessage':
+        return await walletFuncs.publicKeyEncryptMessage(params.message, params.public_key)
+
+    // OublicKeyDecryptMessage
+    case 'PublicKeyDecryptMessage':
+        return await walletFuncs.decryptMessage(params.message, params.public_key)
 
     default:
       throw new Error('Method not found.');
