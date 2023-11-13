@@ -1,4 +1,5 @@
 import nacl from 'tweetnacl';
+import _sodium from 'libsodium-wrappers';
 const algosdk =  require('algosdk/dist/cjs');
 import Utils from './Utils';
 import { panel,  copyable, heading, text, divider } from '@metamask/snaps-ui';
@@ -209,16 +210,22 @@ export default class WalletFuncs{
         if(!confirm){
             Utils.throwError(4001, "user rejected PublicKeyencryptMessage Request");
         }
-
+        
         const sk = new Uint8Array(this.wallet.sk);
         const secretKeyUint8Array = sk.slice(0,32);
 
+        // convert keys
+        await _sodium.ready;
+        const sodium = _sodium;
         const pkUint8Array = new Uint8Array(Buffer.from(public_key, 'hex'));
-
+        
+        const pk_converted = sodium.crypto_sign_ed25519_pk_to_curve25519(pkUint8Array)
+        const sk_converted = sodium.crypto_sign_ed25519_sk_to_curve25519(sk)
+        
         const messageUint8Array = new TextEncoder().encode(message);
         const nonce = nacl.randomBytes(24);
-
-        const encUint8Array = nacl.box(messageUint8Array, nonce, pkUint8Array, secretKeyUint8Array)
+        // const encUint8Array = nacl.box(messageUint8Array, nonce, pkUint8Array, secretKeyUint8Array)
+        const encUint8Array = nacl.box(messageUint8Array, nonce, pk_converted, sk_converted)
         const fullMessage = new Uint8Array(nonce.length + encUint8Array.length);
         fullMessage.set(encUint8Array);
         fullMessage.set(nonce, encUint8Array.length);
@@ -257,7 +264,13 @@ export default class WalletFuncs{
         const secretKeyUint8Array = sk.slice(0,32);
 
         const pkUint8Array = new Uint8Array(Buffer.from(public_key, 'hex'));
-        const msg = nacl.box.open(box, nonce, pkUint8Array, secretKeyUint8Array)
+
+        // convert
+        const pk_converted = sodium.crypto_sign_ed25519_pk_to_curve25519(pkUint8Array)
+        const sk_converted = sodium.crypto_sign_ed25519_sk_to_curve25519(sk)
+
+        // const msg = nacl.box.open(box, nonce, pkUint8Array, secretKeyUint8Array)
+        const msg = nacl.box.open(box, nonce, pk_converted, sk_converted)
 
         if(msg == null){
             Utils.throwError(4001, "Failed PublicKeyDecryptMessage Request");
